@@ -1,0 +1,6 @@
+.DS_Store
+.qwen/
+.claude/
+*.log
+__pycache__/
+.venv/
