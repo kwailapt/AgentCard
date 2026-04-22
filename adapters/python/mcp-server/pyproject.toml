@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name            = "agentcard-mcp"
+version         = "0.1.0"
+description     = "MCP server for AgentCard v1.0 — the framework-neutral A2A identity standard"
+readme          = "README.md"
+license         = { text = "Apache-2.0" }
+authors         = [{ name = "kwailapt", email = "kwailapt@users.noreply.github.com" }]
+keywords        = ["mcp", "agent", "a2a", "agentcard", "identity", "llm"]
+classifiers     = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+
+# Zero mandatory runtime deps — only 'mcp' is needed for the server
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+agentcard-mcp = "agentcard_mcp.__main__:main"
+
+[project.urls]
+Homepage    = "https://github.com/kwailapt/AgentCard"
+Repository  = "https://github.com/kwailapt/AgentCard"
+"Bug Tracker" = "https://github.com/kwailapt/AgentCard/issues"
+Documentation = "https://github.com/kwailapt/AgentCard/tree/main/adapters/python/mcp-server"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentcard_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths    = ["tests"]

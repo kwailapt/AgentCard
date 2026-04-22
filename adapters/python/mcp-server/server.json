@@ -1,0 +1,55 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kwailapt/agentcard",
+  "description": "AgentCard v1.0 — framework-neutral identity layer for agent-to-agent (A2A) communication. Declare, resolve, and validate agent identities using the open AgentCard standard. Analogous to HTTP headers for the agent web.",
+  "repository": {
+    "url": "https://github.com/kwailapt/AgentCard",
+    "source": "github"
+  },
+  "version_detail": {
+    "version": "0.1.0"
+  },
+  "packages": [
+    {
+      "registry_type": "pypi",
+      "name": "agentcard-mcp",
+      "version": "0.1.0",
+      "package_arguments": [
+        {
+          "type": "positional",
+          "value": "-m agentcard_mcp",
+          "value_hint": "Module entry point"
+        }
+      ],
+      "environment_variables": []
+    }
+  ],
+  "tools": [
+    {
+      "name": "agentcard_declare",
+      "description": "Register an agent's AgentCard identity (JSON conforming to AgentCard v1.0 schema). Stores in session registry."
+    },
+    {
+      "name": "agentcard_resolve",
+      "description": "Look up a registered agent's AgentCard by name (partial match) or exact 26-char Crockford Base32 ULID."
+    },
+    {
+      "name": "agentcard_validate",
+      "description": "Validate any JSON string against the AgentCard v1.0 schema. Checks ULID format, semver version, capability ids, Landauer floor pricing."
+    },
+    {
+      "name": "agentcard_list",
+      "description": "List all AgentCards registered in this session with ids, names, capability counts, and endpoints."
+    }
+  ],
+  "resources": [
+    {
+      "uri": "agentcard://schema",
+      "description": "The canonical AgentCard v1.0 JSON Schema."
+    },
+    {
+      "uri": "agentcard://registry",
+      "description": "All declared AgentCards in this session as a JSON array."
+    }
+  ]
+}
