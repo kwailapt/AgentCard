@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "agentcard-adapters"
+version = "0.1.0"
+description = "AgentCard v1.0 adapters for LangChain, CrewAI, and AutoGen"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+keywords = [
+    "agentcard", "a2a", "agent-to-agent", "langchain", "crewai", "autogen",
+    "llm", "ai-agent", "identity", "protocol",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# Core: zero mandatory dependencies — pure stdlib
+dependencies = []
+
+[project.optional-dependencies]
+langchain = ["langchain-core>=0.1.0"]
+crewai    = ["crewai>=0.28.0"]
+autogen   = ["pyautogen>=0.2.0"]
+all       = [
+    "langchain-core>=0.1.0",
+    "crewai>=0.28.0",
+    "pyautogen>=0.2.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[project.urls]
+Homepage      = "https://github.com/kwailapt/AgentCard"
+Repository    = "https://github.com/kwailapt/AgentCard"
+Documentation = "https://github.com/kwailapt/AgentCard/blob/main/README.md"
+"Bug Tracker" = "https://github.com/kwailapt/AgentCard/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ANN"]
+ignore = ["ANN101", "ANN102", "ANN401"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
