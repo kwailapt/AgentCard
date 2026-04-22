@@ -921,13 +921,13 @@ Internet-Draft                  AgentCard                     April 2026
                             Macintosh file type code(s):  none
 
    Person and email address to contact for further information:  Kwai
-      Lap Tsoi <kwailapt@users.noreply.github.com>
+      Lap Tsoi <kwailapt@gmail.com>
 
    Intended usage:  COMMON
 
    Restrictions on usage:  none
 
-   Author:  Kwai Lap Tsoi <kwailapt@users.noreply.github.com>
+   Author:  Kwai Lap Tsoi <kwailapt@gmail.com>
 
    Change controller:  IETF
 
@@ -1070,7 +1070,7 @@ Author's Address
 
    Kwai Lap Tsoi
    Aevum Network
-   Email: kwailapt@users.noreply.github.com
+   Email: kwailapt@gmail.com
    URI:   https://github.com/kwailapt/AgentCard
 
 
