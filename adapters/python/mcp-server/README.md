@@ -3,6 +3,8 @@
 > **AgentCard v1.0 identity layer for agent-to-agent (A2A) communication.**  
 > Give any Claude / LLM agent a machine-readable identity using the open [AgentCard](https://github.com/kwailapt/AgentCard) standard.
 
+<!-- mcp-name: io.github.kwailapt/agentcard -->
+
 [![Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
 [![MCP Compatible](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io)
 [![AgentCard v1.0](https://img.shields.io/badge/AgentCard-v1.0-orange.svg)](https://github.com/kwailapt/AgentCard)
