@@ -36,3 +36,44 @@ or controls the protocol. The Licensor publicly commits to NOT:
 
 This git history and NOTICE serve as evidence of original intent.
 Any fork preserving this NOTICE is the authoritative continuation.
+
+---
+
+AgentCard — AI Agent 標準化身份與能力規格
+
+版權 2026 Aevum Network 貢獻者
+
+本產品採用 Apache License 2.0 授權。
+您可以在 http://www.apache.org/licenses/LICENSE-2.0 獲得許可證副本
+
+專利授權 — 無保留
+
+Apache License 2.0（第三條）授予永久的、全球性的、
+非排他性的、免費的、免版稅的、不可撤銷的專利許可。
+本通知明確重申：
+
+  - 對 AgentCard 規格、線路格式或基於 ULID 的 Agent 身份方案的專利主張
+    不由許可人保留。
+  - 任何貢獻者都不保留超出 Apache 2.0 授予範圍的任何專利。
+  - 任何未來的貢獻者必須在合併前同意這些條款。
+
+規格授權
+
+規格文件（SPEC-CAUSAL-TOPOLOGY.md、schema.json、*-SPEC.md）
+額外採用 CC-BY 4.0 授權：
+https://creativecommons.org/licenses/by/4.0/
+
+這允許 AgentCard 規格被納入 RFC 和其他標準文件中，
+僅需署名，無需另行協議。
+
+公域立場（Rule M1）
+
+AgentCard 設計為開放公共標準——沒有單一實體擁有或控制該協議。
+許可人公開承諾不會：
+
+  1. 向本倉庫添加專有條款或雙重授權。
+  2. 申請涵蓋 AgentCard 規格任何部分的專利。
+  3. 創建功能受限的商業版本。
+
+本 git 歷史和本通知作為原始意圖的證據。
+任何保留本通知的複刻版本均視為本項目的正統延續。
