@@ -1,0 +1,1286 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     ipr="trust200902"
+     docName="draft-aevum-agentcard-00"
+     category="info"
+     submissionType="independent"
+     xml:lang="en"
+     version="3">
+
+  <front>
+    <title abbrev="AgentCard">
+      AgentCard: A Framework-Neutral Identity and Capability
+      Declaration Format for Agent-to-Agent Communication
+    </title>
+
+    <seriesInfo name="Internet-Draft" value="draft-aevum-agentcard-00"/>
+
+    <author fullname="Kwai Lap Tsoi" initials="K." surname="Tsoi">
+      <organization>Aevum Network</organization>
+      <address>
+        <email>kwailapt@users.noreply.github.com</email>
+        <uri>https://github.com/kwailapt/AgentCard</uri>
+      </address>
+    </author>
+
+    <date year="2026" month="April" day="23"/>
+
+    <area>Applications and Real-Time</area>
+    <workgroup>Individual Submission</workgroup>
+
+    <keyword>agent</keyword>
+    <keyword>identity</keyword>
+    <keyword>A2A</keyword>
+    <keyword>capability</keyword>
+    <keyword>JSON</keyword>
+    <keyword>ULID</keyword>
+    <keyword>agent-to-agent</keyword>
+    <keyword>AI</keyword>
+
+    <abstract>
+      <t>
+        This document defines AgentCard, a lightweight JSON data format
+        that enables autonomous software agents to declare their identity,
+        capabilities, communication endpoints, and resource pricing in a
+        framework-neutral manner.  AgentCard is designed for agent-to-agent
+        (A2A) communication scenarios where agents built with different
+        frameworks — such as LangChain, CrewAI, AutoGen, or custom
+        implementations — must interoperate without prior coordination.
+      </t>
+      <t>
+        An AgentCard is a pure data schema: it carries no execution logic
+        and imposes no transport requirements.  It is analogous to an HTTP
+        response header set — a machine-parseable self-description that any
+        compliant reader can interpret.
+      </t>
+      <t>
+        Key properties of AgentCard include a globally unique ULID-based
+        agent identity, dot-namespaced capability identifiers compatible
+        with OpenAI function-calling and Model Context Protocol (MCP) tool
+        schemas, a physics-grounded energy pricing floor derived from
+        Landauer's principle, and an extensible metadata namespace for
+        framework-specific annotations.
+      </t>
+    </abstract>
+
+    <note title="Discussion Venues">
+      <t>
+        Discussion of this document should take place on the GitHub
+        repository at https://github.com/kwailapt/AgentCard/issues.
+        The JSON Schema for AgentCard v1.0 is maintained at
+        https://github.com/kwailapt/AgentCard/blob/main/schema.json.
+      </t>
+    </note>
+
+    <note title="Requirements Language">
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL",
+        "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",
+        "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document
+        are to be interpreted as described in BCP 14
+        <xref target="RFC2119"/> <xref target="RFC8174"/>
+        when, and only when, they appear in all capitals, as shown here.
+      </t>
+    </note>
+  </front>
+
+  <middle>
+
+    
+    <section anchor="introduction" numbered="true" toc="default">
+      <name>Introduction</name>
+
+      <t>
+        The proliferation of autonomous AI agent frameworks has created
+        a fragmentation problem: an agent built with LangChain cannot
+        natively describe its capabilities to an AutoGen orchestrator;
+        a CrewAI researcher agent cannot publish its endpoint in a form
+        that a custom MCP server can consume without bespoke integration
+        code.  Each framework has invented its own internal identity
+        representation, none of which is interoperable by default.
+      </t>
+      <t>
+        This situation is analogous to the pre-HTTP web, where each
+        networked application defined its own message envelope format.
+        The solution was not to mandate a single application protocol
+        but to define a universal, lightweight header format (HTTP
+        headers) that any application could attach to its messages.
+      </t>
+      <t>
+        AgentCard is the equivalent of HTTP headers for the agent web.
+        It defines a minimal JSON document — the "card" — that any
+        agent can produce and any peer can consume, independent of the
+        agent's internal implementation, programming language, or
+        hosting environment.
+      </t>
+
+      <section anchor="goals" numbered="true" toc="default">
+        <name>Design Goals</name>
+        <ol spacing="normal">
+          <li>
+            <strong>Framework neutrality.</strong>  An AgentCard produced
+            by a LangChain tool MUST be interpretable by an AutoGen
+            registry and vice versa.  The format imposes no dependency
+            on any specific agent framework.
+          </li>
+          <li>
+            <strong>Zero execution logic.</strong>  AgentCard is a pure
+            data schema.  It describes what an agent can do and how to
+            reach it; it does not specify how the agent processes requests.
+            Execution semantics are left entirely to the agent and its
+            transport layer.
+          </li>
+          <li>
+            <strong>Globally unique, coordination-free identity.</strong>
+            Agent identities MUST be globally unique without requiring
+            a central registration authority.  This document specifies
+            the use of Universally Unique Lexicographically Sortable
+            Identifiers (ULIDs) <xref target="ULID-SPEC"/> for this purpose.
+          </li>
+          <li>
+            <strong>Physically grounded resource accounting.</strong>
+            AI computation has non-zero energy cost.  AgentCard includes
+            an optional pricing field whose minimum value is constrained
+            by Landauer's principle <xref target="LANDAUER"/>, preventing
+            fraudulent "zero-cost" capability claims in multi-agent
+            economic systems.
+          </li>
+          <li>
+            <strong>Extensibility without breakage.</strong>  New fields
+            MAY be added to future versions of AgentCard.  Readers MUST
+            ignore unknown fields.  The metadata object provides a
+            namespaced extension point for framework- and application-
+            specific annotations.
+          </li>
+        </ol>
+      </section>
+
+      <section anchor="non-goals" numbered="true" toc="default">
+        <name>Non-Goals</name>
+        <t>
+          AgentCard does not specify:
+        </t>
+        <ul spacing="normal">
+          <li>How agents authenticate to each other at the transport layer.</li>
+          <li>The wire format for agent-to-agent message exchange.</li>
+          <li>How capability invocations are dispatched or scheduled.</li>
+          <li>Agent lifecycle management (creation, termination, migration).</li>
+          <li>Trust establishment or public-key infrastructure for agents.</li>
+        </ul>
+        <t>
+          These concerns are addressed by complementary protocols
+          (e.g., OAuth 2.0 <xref target="RFC6749"/>, WIMSE
+          <xref target="I-D.ietf-wimse-arch"/>, and MCP
+          <xref target="MCP-SPEC"/>).
+        </t>
+      </section>
+    </section>
+
+    
+    <section anchor="data-model" numbered="true" toc="default">
+      <name>The AgentCard Data Model</name>
+
+      <t>
+        An AgentCard is a JSON object <xref target="RFC8259"/> containing
+        the fields defined in this section.  The fields
+        <tt>agent_id</tt>, <tt>name</tt>, <tt>version</tt>,
+        <tt>capabilities</tt>, and <tt>endpoint</tt> are REQUIRED.
+        All other fields are OPTIONAL.
+      </t>
+      <t>
+        The normative JSON Schema for AgentCard v1.0, expressed in
+        JSON Schema draft 2020-12 <xref target="JSON-SCHEMA"/>,
+        is maintained at the reference implementation repository
+        <xref target="AGENTCARD-SPEC"/>.
+      </t>
+
+      
+      <section anchor="field-agent-id" numbered="true" toc="default">
+        <name>agent_id</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>string</dd>
+          <dt>Required:</dt><dd>yes</dd>
+          <dt>Constraints:</dt><dd>
+            Exactly 26 characters.  Each character MUST be a member of
+            the Crockford Base32 alphabet: digits 0–9 and uppercase
+            letters A–Z excluding I, L, O, and U.
+          </dd>
+        </dl>
+        <t>
+          The <tt>agent_id</tt> field carries the agent's globally unique
+          identity as a ULID <xref target="ULID-SPEC"/>.  A ULID encodes
+          a 48-bit millisecond-precision timestamp and 80 bits of
+          cryptographically random data into 128 bits total, then
+          serialises the result as a 26-character Crockford Base32
+          string.
+        </t>
+        <t>
+          ULIDs provide the following properties relevant to agent identity:
+        </t>
+        <ul spacing="normal">
+          <li>
+            <strong>Global uniqueness without coordination.</strong>
+            The 80-bit random component gives a collision probability
+            of approximately 2^{-80} per pair of independently generated
+            identities.
+          </li>
+          <li>
+            <strong>Lexicographic time-ordering.</strong>  Agents created
+            later sort after agents created earlier under standard string
+            comparison, which simplifies registry indexing.
+          </li>
+          <li>
+            <strong>URL-safety.</strong>  The Crockford Base32 alphabet
+            contains no characters that require percent-encoding in URIs.
+          </li>
+        </ul>
+        <t>
+          An agent MUST generate its <tt>agent_id</tt> using a
+          cryptographically secure random number generator for the
+          random component of the ULID.  Predictable or sequential
+          random components are PROHIBITED.
+        </t>
+        <t>
+          Example:
+        </t>
+        <artwork><![CDATA[
+"agent_id": "01HZQK3P8EMXR9V7T5N2W4J6C0"
+        ]]></artwork>
+      </section>
+
+      
+      <section anchor="field-name" numbered="true" toc="default">
+        <name>name</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>string</dd>
+          <dt>Required:</dt><dd>yes</dd>
+          <dt>Constraints:</dt><dd>
+            1 to 128 Unicode code points.  MUST NOT be empty.
+          </dd>
+        </dl>
+        <t>
+          A human-readable display name for the agent.  The
+          <tt>name</tt> field is intended for presentation purposes
+          and SHOULD reflect the agent's primary function or role.
+          It is NOT required to be globally unique; uniqueness is
+          provided by <tt>agent_id</tt>.
+        </t>
+        <artwork><![CDATA[
+"name": "WebSearchAgent"
+        ]]></artwork>
+      </section>
+
+      
+      <section anchor="field-version" numbered="true" toc="default">
+        <name>version</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>string</dd>
+          <dt>Required:</dt><dd>yes</dd>
+          <dt>Constraints:</dt><dd>
+            MUST conform to Semantic Versioning 2.0.0 <xref target="SEMVER"/>.
+          </dd>
+        </dl>
+        <t>
+          The version of this AgentCard document.  Implementations
+          SHOULD increment the PATCH component when reissuing an
+          AgentCard with corrected metadata.  They SHOULD increment the
+          MINOR component when new capabilities are added in a
+          backward-compatible manner.  They SHOULD increment the MAJOR
+          component when capabilities are removed or endpoint URLs
+          change incompatibly.
+        </t>
+        <artwork><![CDATA[
+"version": "1.0.0"
+        ]]></artwork>
+      </section>
+
+      
+      <section anchor="field-capabilities" numbered="true" toc="default">
+        <name>capabilities</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>array of objects</dd>
+          <dt>Required:</dt><dd>yes</dd>
+          <dt>Constraints:</dt><dd>
+            MUST contain at least one entry.
+          </dd>
+        </dl>
+        <t>
+          An ordered array of capability declarations.  Each entry
+          describes one thing the agent can do.  Entries SHOULD be
+          ordered from most prominent to least prominent capability.
+        </t>
+
+        <section anchor="capability-id" numbered="true" toc="default">
+          <name>capabilities[].id</name>
+          <dl newline="false" spacing="normal">
+            <dt>Type:</dt><dd>string</dd>
+            <dt>Required:</dt><dd>yes</dd>
+            <dt>Pattern:</dt><dd>
+              <tt>^[a-z0-9][a-z0-9._-]*$</tt>
+            </dd>
+          </dl>
+          <t>
+            A dot-namespaced capability identifier.  The identifier
+            MUST begin with a lowercase letter or digit.  Subsequent
+            characters MAY be lowercase letters, digits, dots,
+            underscores, or hyphens.
+          </t>
+          <t>
+            Convention for the dot-namespace:
+          </t>
+          <ul spacing="normal">
+            <li>
+              <tt>text.*</tt> — natural language processing capabilities
+              (e.g., <tt>text.generate</tt>, <tt>text.summarise</tt>)
+            </li>
+            <li>
+              <tt>tool.*</tt> — executable tool wrappers
+              (e.g., <tt>tool.web_search</tt>, <tt>tool.python_repl</tt>)
+            </li>
+            <li>
+              <tt>data.*</tt> — data retrieval and transformation
+              (e.g., <tt>data.query_sql</tt>, <tt>data.fetch_csv</tt>)
+            </li>
+            <li>
+              <tt>fn.*</tt> — named function exposure compatible with
+              OpenAI function-calling schema
+              (e.g., <tt>fn.get_weather</tt>)
+            </li>
+            <li>
+              <tt>a2a.*</tt> — agent coordination capabilities
+              (e.g., <tt>a2a.delegate</tt>, <tt>a2a.negotiate</tt>)
+            </li>
+          </ul>
+          <t>
+            Implementations SHOULD use the conventional namespaces above.
+            Private or experimental namespaces MAY use a reverse-domain
+            prefix (e.g., <tt>com.example.custom_capability</tt>).
+          </t>
+          <t>
+            The <tt>capabilities[].id</tt> is designed to be compatible
+            with the <tt>name</tt> field of an OpenAI-style function
+            schema and the <tt>name</tt> field of an MCP tool definition,
+            enabling zero-conversion interoperability.
+          </t>
+        </section>
+
+        <section anchor="capability-description" numbered="true" toc="default">
+          <name>capabilities[].description</name>
+          <dl newline="false" spacing="normal">
+            <dt>Type:</dt><dd>string</dd>
+            <dt>Required:</dt><dd>no (RECOMMENDED)</dd>
+          </dl>
+          <t>
+            A human-readable description of the capability for use in
+            LLM prompts, API documentation, and agent discovery UIs.
+            Implementations SHOULD provide this field.  The description
+            SHOULD be one to three sentences that describe what the
+            capability does, what inputs it accepts, and what it returns.
+          </t>
+        </section>
+
+        <section anchor="capability-schemas" numbered="true" toc="default">
+          <name>capabilities[].input_schema and capabilities[].output_schema</name>
+          <dl newline="false" spacing="normal">
+            <dt>Type:</dt><dd>object (JSON Schema)</dd>
+            <dt>Required:</dt><dd>no</dd>
+          </dl>
+          <t>
+            Optional JSON Schema objects describing the expected input
+            parameters and output structure of the capability.  When
+            provided, these schemas MUST conform to JSON Schema
+            <xref target="JSON-SCHEMA"/> and SHOULD be compatible with
+            the <tt>parameters</tt> object in OpenAI function-calling
+            format.
+          </t>
+        </section>
+
+        <section anchor="capability-tags" numbered="true" toc="default">
+          <name>capabilities[].tags</name>
+          <dl newline="false" spacing="normal">
+            <dt>Type:</dt><dd>array of strings</dd>
+            <dt>Required:</dt><dd>no</dd>
+          </dl>
+          <t>
+            Optional list of free-form tags for discovery and filtering.
+          </t>
+        </section>
+
+        <section anchor="capability-example" numbered="true" toc="default">
+          <name>Example</name>
+          <t>
+            Example capabilities array:
+          </t>
+          <artwork><![CDATA[
+"capabilities": [
+  {
+    "id": "text.summarise",
+    "description": "Summarise a document to a target length.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "text":        { "type": "string" },
+        "max_words":   { "type": "integer", "default": 200 }
+      },
+      "required": ["text"]
+    }
+  },
+  {
+    "id": "tool.web_search",
+    "description": "Search the public web and return top results.",
+    "tags": ["search", "retrieval"]
+  }
+]
+          ]]></artwork>
+        </section>
+      </section>
+
+      
+      <section anchor="field-endpoint" numbered="true" toc="default">
+        <name>endpoint</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>object</dd>
+          <dt>Required:</dt><dd>yes</dd>
+        </dl>
+        <t>
+          Describes how to reach the agent.  Contains two REQUIRED
+          sub-fields and one OPTIONAL sub-field:
+        </t>
+
+        <section anchor="endpoint-protocol" numbered="true" toc="default">
+          <name>endpoint.protocol</name>
+          <t>
+            REQUIRED.  MUST be one of: <tt>http</tt>, <tt>https</tt>,
+            <tt>grpc</tt>, <tt>stdio</tt>, or <tt>mcp</tt>.
+          </t>
+          <t>
+            The value <tt>mcp</tt> indicates that the agent is accessible
+            via the Model Context Protocol <xref target="MCP-SPEC"/>.
+            The value <tt>stdio</tt> indicates an agent that communicates
+            over standard input/output streams (applicable to local
+            subprocess agents).
+          </t>
+        </section>
+
+        <section anchor="endpoint-url" numbered="true" toc="default">
+          <name>endpoint.url</name>
+          <t>
+            REQUIRED.  A URI <xref target="RFC3986"/> identifying the
+            agent's communication endpoint.  The URI MUST be consistent
+            with the declared protocol (e.g., an <tt>https</tt> endpoint
+            MUST begin with the scheme <tt>https://</tt>).
+          </t>
+        </section>
+
+        <section anchor="endpoint-auth" numbered="true" toc="default">
+          <name>endpoint.auth</name>
+          <t>
+            OPTIONAL.  An object describing the authentication scheme
+            required to contact the endpoint.  The <tt>auth.scheme</tt>
+            sub-field MUST be one of: <tt>none</tt>, <tt>bearer</tt>,
+            <tt>api_key</tt>, <tt>oauth2</tt>, or <tt>mtls</tt>.
+            The default value is <tt>none</tt>.
+          </t>
+          <t>
+            Presence of an <tt>auth</tt> object does not constitute
+            credential exchange; it is a declaration of the authentication
+            mechanism required.  Actual credential negotiation is handled
+            by the transport layer.
+          </t>
+        </section>
+
+        <section anchor="endpoint-example" numbered="true" toc="default">
+          <name>Example</name>
+          <artwork><![CDATA[
+"endpoint": {
+  "protocol": "https",
+  "url": "https://agents.example.com/api/summariser",
+  "auth": { "scheme": "bearer" }
+}
+          ]]></artwork>
+        </section>
+      </section>
+
+      
+      <section anchor="field-pricing" numbered="true" toc="default">
+        <name>pricing</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>object</dd>
+          <dt>Required:</dt><dd>no</dd>
+        </dl>
+        <t>
+          Describes the resource cost of invoking the agent.  All
+          cost values are expressed in SI units: joules for energy.
+        </t>
+
+        <section anchor="pricing-base-cost-joules" numbered="true" toc="default">
+          <name>pricing.base_cost_joules</name>
+          <t>
+            The minimum energy cost per invocation in joules.
+            If present, this value MUST be either exactly zero (the
+            agent imposes no energy charge) or greater than or equal to
+            the Landauer limit at 300 K:
+          </t>
+          <artwork><![CDATA[
+L = k_B * T * ln(2) = 1.381e-23 J/K * 300 K * 0.693 = 2.854e-21 J
+          ]]></artwork>
+          <t>
+            where k_B is the Boltzmann constant (1.380649 × 10^{-23}
+            J/K, SI 2019 definition) and T is the ambient temperature
+            in kelvin.
+          </t>
+          <t>
+            Landauer's principle <xref target="LANDAUER"/> establishes
+            that erasing one bit of information in a system at
+            temperature T dissipates at least k_B * T * ln(2) joules
+            as heat.  Any real computation that modifies memory must
+            erase at least one bit; therefore no physical computation
+            can have a base energy cost strictly between zero and the
+            Landauer limit.  A <tt>base_cost_joules</tt> value in the
+            open interval (0, 2.854e-21) is physically impossible and
+            MUST be rejected by conformant validators.
+          </t>
+          <t>
+            This constraint is not a billing requirement: it is a
+            physical plausibility check.  Agents SHOULD set
+            <tt>base_cost_joules</tt> to a realistic estimate of
+            their per-invocation energy consumption.  This enables
+            multi-agent economic systems to perform energy-accounting
+            without fraudulent zero-cost claims.
+          </t>
+        </section>
+
+        <section anchor="pricing-per-token-joules" numbered="true" toc="default">
+          <name>pricing.per_token_joules</name>
+          <t>
+            The additional energy cost per output token, in joules.
+            If present, MUST be non-negative.
+          </t>
+        </section>
+
+        <section anchor="pricing-example" numbered="true" toc="default">
+          <name>Example</name>
+          <artwork><![CDATA[
+"pricing": {
+  "base_cost_joules": 2.854e-21,
+  "per_token_joules": 1.4e-24
+}
+          ]]></artwork>
+        </section>
+      </section>
+
+      
+      <section anchor="field-metadata" numbered="true" toc="default">
+        <name>metadata</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>object</dd>
+          <dt>Required:</dt><dd>no</dd>
+        </dl>
+        <t>
+          An open-ended object for framework- and application-specific
+          annotations.  Implementations MUST NOT reject an AgentCard
+          because it contains unrecognised metadata keys.
+        </t>
+        <t>
+          Keys beginning with the prefix <tt>pacr:</tt> are reserved
+          for annotations derived from Physically Annotated Causal
+          Records (PACR) as defined in the Aevum Network specification.
+          Keys beginning with the prefix <tt>mcp:</tt> are reserved for
+          Model Context Protocol annotations.  All other prefixes are
+          unregistered and available for private use.
+        </t>
+        <t>
+          The following <tt>pacr:</tt>-prefixed keys are defined in
+          this document:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt><tt>pacr:trust_tier</tt></dt>
+          <dd>
+            A trust classification derived from the agent's causal
+            return rate.  MUST be one of: <tt>untrusted</tt>,
+            <tt>basic</tt>, <tt>established</tt>, <tt>verified</tt>,
+            or <tt>banned</tt>.  Absence of this field implies
+            <tt>untrusted</tt>.
+          </dd>
+          <dt><tt>pacr:substrate_scope</tt></dt>
+          <dd>
+            A free-form string identifying the computational substrate
+            (hardware or data population) on which the agent was trained
+            or calibrated (e.g., <tt>"M1_Ultra"</tt>, <tt>"UKBiobank"</tt>).
+            This field is used to prevent data-bias ossification in
+            multi-agent systems that aggregate statistics across
+            heterogeneous agents.
+          </dd>
+        </dl>
+        <artwork><![CDATA[
+"metadata": {
+  "pacr:trust_tier": "established",
+  "pacr:substrate_scope": "AWS_Graviton_c7g",
+  "framework": "crewai",
+  "created_at": "2026-04-23T00:00:00Z"
+}
+        ]]></artwork>
+      </section>
+
+      
+      <section anchor="field-goal-subscriptions" numbered="true" toc="default">
+        <name>goal_subscriptions</name>
+        <dl newline="false" spacing="normal">
+          <dt>Type:</dt><dd>array of objects</dd>
+          <dt>Required:</dt><dd>no</dd>
+        </dl>
+        <t>
+          An optional list of shared goals that this agent has
+          subscribed to participate in.  This field supports
+          multi-agent coalition formation: an orchestrator can
+          discover all agents that have subscribed to a given goal
+          identifier and assemble a coalition without prior explicit
+          configuration.
+        </t>
+        <t>
+          Each entry contains a REQUIRED <tt>goal_id</tt> string, an
+          OPTIONAL human-readable <tt>description</tt>, and an OPTIONAL
+          <tt>priority</tt> value in the range [0, 1] indicating the
+          agent's relative commitment to this goal.
+        </t>
+        <artwork><![CDATA[
+"goal_subscriptions": [
+  {
+    "goal_id": "01HZQK3P8EMXR9V7T5N2W4J6C1",
+    "description": "Competitive analysis for Q3 2026",
+    "priority": 0.8
+  }
+]
+        ]]></artwork>
+      </section>
+    </section>
+
+    
+    <section anchor="serialization" numbered="true" toc="default">
+      <name>Serialization and Media Type</name>
+
+      <t>
+        An AgentCard MUST be serialised as a JSON object
+        <xref target="RFC8259"/>.  The canonical serialisation MUST
+        use UTF-8 character encoding <xref target="RFC3629"/>.
+      </t>
+      <t>
+        The RECOMMENDED media type for AgentCard documents is
+        <tt>application/agentcard+json</tt> (see
+        <xref target="iana-media-type"/>).  Implementations SHOULD
+        also accept <tt>application/json</tt> for backward compatibility.
+      </t>
+      <t>
+        When an AgentCard is embedded in another document (e.g., an
+        MCP tool response), the embedding format MAY serialize the
+        AgentCard as a JSON string containing an escaped JSON object.
+        Implementations MUST accept both embedded-string and direct-
+        object forms.
+      </t>
+    </section>
+
+    
+    <section anchor="discovery" numbered="true" toc="default">
+      <name>Well-Known URI Discovery</name>
+
+      <t>
+        An agent that serves its AgentCard at a well-known HTTP(S)
+        endpoint SHOULD publish it at the path
+        <tt>/.well-known/agentcard</tt> relative to the agent's base
+        URL (see <xref target="iana-well-known"/>).
+      </t>
+      <t>
+        For example, an agent at <tt>https://agents.example.com/</tt>
+        SHOULD publish its AgentCard at:
+      </t>
+      <artwork><![CDATA[
+GET https://agents.example.com/.well-known/agentcard
+Accept: application/agentcard+json
+
+HTTP/1.1 200 OK
+Content-Type: application/agentcard+json
+Cache-Control: max-age=3600
+
+{
+  "agent_id": "01HZQK3P8EMXR9V7T5N2W4J6C0",
+  "name": "ExampleAgent",
+  ...
+}
+      ]]></artwork>
+      <t>
+        The response SHOULD include a <tt>Cache-Control</tt> header.
+        AgentCards are relatively stable documents; a max-age of
+        3600 seconds (one hour) is RECOMMENDED.  Validators and
+        registries SHOULD re-fetch at the cache expiry interval.
+      </t>
+      <t>
+        Agents that use the <tt>mcp</tt> protocol SHOULD also expose
+        their AgentCard via the AgentCard MCP server tools defined in
+        <xref target="AGENTCARD-MCP"/>.
+      </t>
+    </section>
+
+    
+    <section anchor="validation" numbered="true" toc="default">
+      <name>Validation Rules</name>
+
+      <t>
+        A conformant AgentCard validator MUST enforce the following
+        rules.  A document that fails any MUST rule is invalid and
+        MUST be rejected.
+      </t>
+
+      <ol spacing="normal">
+        <li>
+          <tt>agent_id</tt> MUST be exactly 26 characters drawn
+          from the Crockford Base32 alphabet
+          (<tt>[0-9A-HJKMNP-TV-Z]</tt>).
+        </li>
+        <li>
+          <tt>version</tt> MUST conform to Semantic Versioning 2.0.0.
+          The regular expression is:
+          <tt>^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)
+          (?:-[0-9A-Za-z\-.]+)?(?:\+[0-9A-Za-z\-.]+)?$</tt>
+        </li>
+        <li>
+          <tt>capabilities</tt> MUST contain at least one entry.
+        </li>
+        <li>
+          Each <tt>capabilities[i].id</tt> MUST match
+          <tt>^[a-z0-9][a-z0-9._-]*$</tt>.
+        </li>
+        <li>
+          <tt>endpoint.protocol</tt> MUST be one of:
+          <tt>http</tt>, <tt>https</tt>, <tt>grpc</tt>,
+          <tt>stdio</tt>, <tt>mcp</tt>.
+        </li>
+        <li>
+          <tt>endpoint.url</tt> MUST be a valid URI
+          <xref target="RFC3986"/>.
+        </li>
+        <li>
+          If <tt>pricing.base_cost_joules</tt> is present and non-zero,
+          it MUST be greater than or equal to 2.854 × 10^{-21} joules
+          (the Landauer limit at 300 K).
+        </li>
+        <li>
+          If <tt>pricing.per_token_joules</tt> is present, it MUST be
+          non-negative.
+        </li>
+        <li>
+          <tt>metadata.pacr:trust_tier</tt>, if present, MUST be one
+          of: <tt>untrusted</tt>, <tt>basic</tt>, <tt>established</tt>,
+          <tt>verified</tt>, <tt>banned</tt>.
+        </li>
+        <li>
+          Validators MUST ignore unknown fields at all levels of the
+          AgentCard hierarchy.  Unknown fields MUST NOT cause
+          validation failure.
+        </li>
+      </ol>
+    </section>
+
+    
+    <section anchor="relation-to-existing" numbered="true" toc="default">
+      <name>Relation to Existing Work</name>
+
+      <section anchor="vs-oauth" numbered="true" toc="default">
+        <name>OAuth 2.0 and WIMSE</name>
+        <t>
+          OAuth 2.0 <xref target="RFC6749"/> and the emerging WIMSE
+          framework <xref target="I-D.ietf-wimse-arch"/> address
+          credential issuance, delegation, and workload authentication.
+          AgentCard is complementary: it describes what an already-
+          authenticated agent can do and how to reach it.  An
+          implementor SHOULD use WIMSE or OAuth for authentication
+          and AgentCard for capability advertisement.
+        </t>
+      </section>
+
+      <section anchor="vs-mcp" numbered="true" toc="default">
+        <name>Model Context Protocol (MCP)</name>
+        <t>
+          MCP <xref target="MCP-SPEC"/> defines a protocol for
+          communication between language model hosts and tool servers.
+          AgentCard defines a data format for self-description that
+          MCP servers can publish.  The two are orthogonal: an
+          MCP server MAY publish an AgentCard; an AgentCard MAY
+          reference an MCP endpoint.
+        </t>
+        <t>
+          The <tt>capabilities[].id</tt> dot-namespace convention
+          in AgentCard is intentionally compatible with MCP tool
+          <tt>name</tt> fields to minimise conversion overhead.
+        </t>
+      </section>
+
+      <section anchor="vs-did" numbered="true" toc="default">
+        <name>Decentralised Identifiers (DIDs)</name>
+        <t>
+          DID Documents <xref target="W3C-DID"/> provide verifiable,
+          self-sovereign identity using public-key cryptography.
+          AgentCard does not incorporate cryptographic binding by
+          design: requiring agents to manage key pairs introduces
+          deployment friction disproportionate to the use case of
+          framework-neutral capability advertisement.  Implementors
+          requiring cryptographic agent identity SHOULD embed a DID
+          reference in the AgentCard <tt>metadata</tt> field and sign
+          the AgentCard using the DID's verification method.
+        </t>
+      </section>
+
+      <section anchor="vs-openapi" numbered="true" toc="default">
+        <name>OpenAPI and AsyncAPI</name>
+        <t>
+          OpenAPI <xref target="OPENAPI"/> and AsyncAPI describe
+          the full API surface of a service: paths, parameters,
+          response schemas, authentication flows, and server listings.
+          AgentCard is intentionally lighter: it declares what an
+          agent is and what it can do, not the complete HTTP API
+          surface.  AgentCard and OpenAPI are complementary; an
+          AgentCard MAY reference a full OpenAPI document via the
+          <tt>metadata</tt> field.
+        </t>
+      </section>
+    </section>
+
+    
+    <section anchor="complete-example" numbered="true" toc="default">
+      <name>Complete Example</name>
+
+      <artwork><![CDATA[
+{
+  "agent_id": "01HZQK3P8EMXR9V7T5N2W4J6C0",
+  "name": "ResearchAnalyst",
+  "version": "1.2.0",
+  "capabilities": [
+    {
+      "id": "text.summarise",
+      "description": "Summarise a document to a given word limit.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text":      { "type": "string" },
+          "max_words": { "type": "integer", "default": 200 }
+        },
+        "required": ["text"]
+      }
+    },
+    {
+      "id": "tool.web_search",
+      "description": "Search the public web and return top-k results.",
+      "tags": ["search", "retrieval"]
+    },
+    {
+      "id": "data.fetch_csv",
+      "description": "Fetch a CSV file from a URL and return parsed rows."
+    }
+  ],
+  "endpoint": {
+    "protocol": "https",
+    "url": "https://agents.example.com/api/research-analyst",
+    "auth": { "scheme": "bearer" }
+  },
+  "pricing": {
+    "base_cost_joules": 2.854e-21,
+    "per_token_joules": 1.4e-24
+  },
+  "metadata": {
+    "pacr:trust_tier": "established",
+    "pacr:substrate_scope": "AWS_Graviton_c7g",
+    "framework": "crewai",
+    "created_at": "2026-04-23T00:00:00Z"
+  },
+  "goal_subscriptions": [
+    {
+      "goal_id": "01HZQK3P8EMXR9V7T5N2W4J6C1",
+      "description": "Competitive analysis for Q3 2026",
+      "priority": 0.8
+    }
+  ]
+}
+      ]]></artwork>
+    </section>
+
+    
+    <section anchor="security" numbered="true" toc="default">
+      <name>Security Considerations</name>
+
+      <section anchor="sec-spoofing" numbered="true" toc="default">
+        <name>Capability Spoofing</name>
+        <t>
+          AgentCard does not authenticate the claims made in the
+          <tt>capabilities</tt> array.  A malicious agent could
+          advertise capabilities it does not possess.  Consumers MUST
+          NOT grant elevated privileges or trust solely on the basis
+          of declared capabilities.  Operational trust SHOULD be
+          established through observed behaviour over time (e.g., via
+          a causal return rate as described in
+          <xref target="field-pricing"/>).
+        </t>
+      </section>
+
+      <section anchor="sec-id-collision" numbered="true" toc="default">
+        <name>ULID Collision and Prediction</name>
+        <t>
+          ULID collision probability is approximately 2^{-80} per pair
+          for randomly generated identifiers.  Implementations MUST
+          use a cryptographically secure random number generator for
+          the 80-bit random component.  Sequential or low-entropy
+          random components permit identity prediction and MUST NOT
+          be used in adversarial environments.
+        </t>
+      </section>
+
+      <section anchor="sec-pricing-manipulation" numbered="true" toc="default">
+        <name>Pricing Field Manipulation</name>
+        <t>
+          The Landauer floor check prevents trivially implausible
+          energy claims but does not prevent an agent from claiming
+          an energy cost far below its true cost.  Multi-agent systems
+          that use <tt>pricing.base_cost_joules</tt> for economic
+          settlement SHOULD independently verify claimed costs against
+          observed latency and throughput.
+        </t>
+      </section>
+
+      <section anchor="sec-trust-tier" numbered="true" toc="default">
+        <name>Trust Tier Self-Declaration</name>
+        <t>
+          The <tt>metadata.pacr:trust_tier</tt> field is self-declared.
+          A malicious agent could claim a high trust tier it has not
+          earned.  Consumers SHOULD treat self-declared trust tiers
+          as advisory hints and MUST validate trust tier claims
+          against an independent record of the agent's interaction
+          history before acting on them.
+        </t>
+      </section>
+
+      <section anchor="sec-endpoint-redirect" numbered="true" toc="default">
+        <name>Endpoint Redirection</name>
+        <t>
+          If an agent's AgentCard is served over HTTP (not HTTPS),
+          an on-path attacker can substitute a malicious endpoint
+          URL.  Agents SHOULD serve AgentCards exclusively over TLS
+          (<tt>https://</tt>).  Consumers SHOULD reject AgentCards
+          whose endpoint URL scheme differs from the scheme used to
+          fetch the AgentCard.
+        </t>
+      </section>
+
+      <section anchor="sec-pii" numbered="true" toc="default">
+        <name>Personally Identifiable Information</name>
+        <t>
+          AgentCard does not define any fields for personally
+          identifiable information (PII).  Implementors MUST NOT
+          embed user data, operator names, or other PII in the
+          <tt>name</tt>, <tt>capabilities[].description</tt>,
+          or <tt>metadata</tt> fields unless the AgentCard is
+          served over a channel with appropriate access controls.
+        </t>
+      </section>
+    </section>
+
+    
+    <section anchor="iana" numbered="true" toc="default">
+      <name>IANA Considerations</name>
+
+      <section anchor="iana-media-type" numbered="true" toc="default">
+        <name>Media Type Registration</name>
+        <t>
+          This document requests that IANA register the following
+          media type in the "Media Types" registry
+          <xref target="RFC6838"/>:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>Type name:</dt><dd>application</dd>
+          <dt>Subtype name:</dt><dd>agentcard+json</dd>
+          <dt>Required parameters:</dt><dd>none</dd>
+          <dt>Optional parameters:</dt><dd>none</dd>
+          <dt>Encoding considerations:</dt>
+          <dd>binary (UTF-8 JSON object)</dd>
+          <dt>Security considerations:</dt>
+          <dd>See <xref target="security"/>.</dd>
+          <dt>Published specification:</dt>
+          <dd>This document.</dd>
+          <dt>Applications that use this media type:</dt>
+          <dd>
+            AI agent frameworks, multi-agent orchestrators, MCP
+            servers, and agent registries that implement the AgentCard
+            specification.
+          </dd>
+          <dt>Additional information:</dt>
+          <dd>
+            <dl newline="false" spacing="normal">
+              <dt>Magic number(s):</dt><dd>none</dd>
+              <dt>File extension(s):</dt><dd>.agentcard.json</dd>
+              <dt>Macintosh file type code(s):</dt><dd>none</dd>
+            </dl>
+          </dd>
+          <dt>Person and email address to contact for further information:</dt>
+          <dd>
+            Kwai Lap Tsoi &lt;kwailapt@users.noreply.github.com&gt;
+          </dd>
+          <dt>Intended usage:</dt><dd>COMMON</dd>
+          <dt>Restrictions on usage:</dt><dd>none</dd>
+          <dt>Author:</dt>
+          <dd>Kwai Lap Tsoi &lt;kwailapt@users.noreply.github.com&gt;</dd>
+          <dt>Change controller:</dt><dd>IETF</dd>
+        </dl>
+      </section>
+
+      <section anchor="iana-well-known" numbered="true" toc="default">
+        <name>Well-Known URI Registration</name>
+        <t>
+          This document requests that IANA register the following
+          well-known URI in the "Well-Known URIs" registry
+          <xref target="RFC8615"/>:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>URI suffix:</dt><dd>agentcard</dd>
+          <dt>Change controller:</dt><dd>IETF</dd>
+          <dt>Specification document(s):</dt><dd>This document.</dd>
+          <dt>Related information:</dt>
+          <dd>
+            The resource at <tt>/.well-known/agentcard</tt> is an
+            <tt>application/agentcard+json</tt> document describing
+            the agent accessible at the host.
+          </dd>
+        </dl>
+      </section>
+    </section>
+
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+
+      <references>
+        <name>Normative References</name>
+
+        <reference anchor="RFC2119">
+          <front>
+            <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+            <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+            <date month="March" year="1997"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="2119"/>
+          <seriesInfo name="DOI" value="10.17487/RFC2119"/>
+        </reference>
+
+        <reference anchor="RFC8174">
+          <front>
+            <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+            <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+            <date month="May" year="2018"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="8174"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8174"/>
+        </reference>
+
+        <reference anchor="RFC8259">
+          <front>
+            <title>The JavaScript Object Notation (JSON) Data Interchange Format</title>
+            <author fullname="T. Bray" initials="T." role="editor" surname="Bray"/>
+            <date month="December" year="2017"/>
+          </front>
+          <seriesInfo name="STD" value="90"/>
+          <seriesInfo name="RFC" value="8259"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8259"/>
+        </reference>
+
+        <reference anchor="RFC3986">
+          <front>
+            <title>Uniform Resource Identifier (URI): Generic Syntax</title>
+            <author fullname="T. Berners-Lee" initials="T." surname="Berners-Lee"/>
+            <author fullname="R. Fielding" initials="R." surname="Fielding"/>
+            <author fullname="L. Masinter" initials="L." surname="Masinter"/>
+            <date month="January" year="2005"/>
+          </front>
+          <seriesInfo name="STD" value="66"/>
+          <seriesInfo name="RFC" value="3986"/>
+          <seriesInfo name="DOI" value="10.17487/RFC3986"/>
+        </reference>
+
+        <reference anchor="RFC3629">
+          <front>
+            <title>UTF-8, a transformation format of ISO 10646</title>
+            <author fullname="F. Yergeau" initials="F." surname="Yergeau"/>
+            <date month="November" year="2003"/>
+          </front>
+          <seriesInfo name="STD" value="63"/>
+          <seriesInfo name="RFC" value="3629"/>
+          <seriesInfo name="DOI" value="10.17487/RFC3629"/>
+        </reference>
+
+        <reference anchor="RFC6838">
+          <front>
+            <title>Media Type Specifications and Registration Procedures</title>
+            <author fullname="N. Freed" initials="N." surname="Freed"/>
+            <author fullname="J. Klensin" initials="J." surname="Klensin"/>
+            <author fullname="T. Hansen" initials="T." surname="Hansen"/>
+            <date month="January" year="2013"/>
+          </front>
+          <seriesInfo name="BCP" value="13"/>
+          <seriesInfo name="RFC" value="6838"/>
+          <seriesInfo name="DOI" value="10.17487/RFC6838"/>
+        </reference>
+
+        <reference anchor="RFC8615">
+          <front>
+            <title>Well-Known Uniform Resource Identifiers (URIs)</title>
+            <author fullname="M. Nottingham" initials="M." surname="Nottingham"/>
+            <date month="May" year="2019"/>
+          </front>
+          <seriesInfo name="RFC" value="8615"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8615"/>
+        </reference>
+
+        <reference anchor="ULID-SPEC"
+                   target="https://github.com/ulid/spec">
+          <front>
+            <title>ULID Specification</title>
+            <author fullname="Alizain Feerasta" surname="Feerasta"/>
+            <date year="2019"/>
+          </front>
+        </reference>
+
+        <reference anchor="SEMVER"
+                   target="https://semver.org/spec/v2.0.0.html">
+          <front>
+            <title>Semantic Versioning 2.0.0</title>
+            <author fullname="Tom Preston-Werner" surname="Preston-Werner"/>
+            <date year="2013"/>
+          </front>
+        </reference>
+
+        <reference anchor="JSON-SCHEMA"
+                   target="https://json-schema.org/draft/2020-12/json-schema-core.html">
+          <front>
+            <title>JSON Schema: A Media Type for Describing JSON Documents (draft 2020-12)</title>
+            <author fullname="A. Wright" initials="A." surname="Wright"/>
+            <author fullname="H. Andrews" initials="H." surname="Andrews"/>
+            <author fullname="B. Hutton" initials="B." surname="Hutton"/>
+            <date year="2022"/>
+          </front>
+        </reference>
+
+      </references>
+
+      <references>
+        <name>Informative References</name>
+
+        <reference anchor="RFC6749">
+          <front>
+            <title>The OAuth 2.0 Authorization Framework</title>
+            <author fullname="D. Hardt" initials="D." role="editor" surname="Hardt"/>
+            <date month="October" year="2012"/>
+          </front>
+          <seriesInfo name="RFC" value="6749"/>
+          <seriesInfo name="DOI" value="10.17487/RFC6749"/>
+        </reference>
+
+        <reference anchor="I-D.ietf-wimse-arch"
+                   target="https://datatracker.ietf.org/doc/draft-ietf-wimse-arch/">
+          <front>
+            <title>Workload Identity in Multi System Environments (WIMSE) Architecture</title>
+            <author fullname="Y. Rosenzweig" initials="Y." surname="Rosenzweig"/>
+            <author fullname="H. Tschofenig" initials="H." surname="Tschofenig"/>
+            <date year="2025"/>
+          </front>
+          <seriesInfo name="Internet-Draft"
+                      value="draft-ietf-wimse-arch"/>
+        </reference>
+
+        <reference anchor="LANDAUER"
+                   target="https://doi.org/10.1147/rd.53.0183">
+          <front>
+            <title>Irreversibility and Heat Generation in the Computing Process</title>
+            <author fullname="R. Landauer" initials="R." surname="Landauer"/>
+            <date year="1961"/>
+          </front>
+          <seriesInfo name="IBM Journal of Research and Development"
+                      value="5(3):183-191"/>
+        </reference>
+
+        <reference anchor="MCP-SPEC"
+                   target="https://modelcontextprotocol.io/specification">
+          <front>
+            <title>Model Context Protocol Specification</title>
+            <author>
+              <organization>Anthropic</organization>
+            </author>
+            <date year="2024"/>
+          </front>
+        </reference>
+
+        <reference anchor="W3C-DID"
+                   target="https://www.w3.org/TR/did-core/">
+          <front>
+            <title>Decentralized Identifiers (DIDs) v1.0</title>
+            <author fullname="M. Sporny" initials="M." surname="Sporny"/>
+            <author fullname="D. Longley" initials="D." surname="Longley"/>
+            <date year="2022"/>
+          </front>
+        </reference>
+
+        <reference anchor="OPENAPI"
+                   target="https://spec.openapis.org/oas/v3.1.0">
+          <front>
+            <title>OpenAPI Specification v3.1.0</title>
+            <author>
+              <organization>OpenAPI Initiative</organization>
+            </author>
+            <date year="2021"/>
+          </front>
+        </reference>
+
+        <reference anchor="AGENTCARD-SPEC"
+                   target="https://github.com/kwailapt/AgentCard">
+          <front>
+            <title>AgentCard Reference Implementation and JSON Schema</title>
+            <author fullname="Kwai Lap Tsoi" surname="Tsoi"/>
+            <date year="2026"/>
+          </front>
+        </reference>
+
+        <reference anchor="AGENTCARD-MCP"
+                   target="https://github.com/kwailapt/AgentCard/tree/main/adapters/python/mcp-server">
+          <front>
+            <title>agentcard-mcp: MCP Server for AgentCard Identity</title>
+            <author fullname="Kwai Lap Tsoi" surname="Tsoi"/>
+            <date year="2026"/>
+          </front>
+        </reference>
+
+      </references>
+    </references>
+
+    <section anchor="acknowledgements" numbered="false" toc="default">
+      <name>Acknowledgements</name>
+      <t>
+        The author thanks the Aevum Network community for feedback on
+        the PACR-derived metadata fields, and the MCP ecosystem for
+        validating the dot-namespaced capability identifier convention
+        through practical implementation.
+      </t>
+      <t>
+        The Landauer pricing floor concept was first articulated in the
+        context of multi-agent economic systems in the Aevum Network
+        specification (2026).  Its inclusion in AgentCard reflects the
+        broader principle that computational resources are physically
+        bounded and should be declared honestly.
+      </t>
+    </section>
+
+  </back>
+</rfc>
