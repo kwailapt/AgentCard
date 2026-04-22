@@ -1,0 +1,38 @@
+AgentCard — Standardized Identity & Capability Schema for AI Agents
+
+Copyright 2026 Aevum Network Contributors
+
+This product is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+PATENT GRANT — NO RESERVATION
+
+The Apache License 2.0 (Section 3) grants a perpetual, worldwide,
+non-exclusive, no-charge, royalty-free, irrevocable patent license.
+This NOTICE explicitly reaffirms:
+
+  - No patent claims covering the AgentCard schema, wire format, or
+    ULID-based agent identity scheme are reserved by the Licensor.
+  - No contributor holds back any patent beyond what Apache 2.0 grants.
+  - Any future contributor must agree to these terms before merge.
+
+SPECIFICATION LICENSE
+
+Specification documents (SPEC-CAUSAL-TOPOLOGY.md, schema.json, *-SPEC.md)
+are additionally licensed under CC-BY 4.0:
+https://creativecommons.org/licenses/by/4.0/
+
+This allows AgentCard specifications to be incorporated into RFCs and
+other standards documents with attribution, without a separate agreement.
+
+PUBLIC DOMAIN POSTURE (Rule M1)
+
+AgentCard is designed as an open public standard — no single entity owns
+or controls the protocol. The Licensor publicly commits to NOT:
+
+  1. Add proprietary terms or dual-licensing to this repository.
+  2. File patent claims covering any part of the AgentCard schema.
+  3. Create a commercial edition withholding capabilities from the open version.
+
+This git history and NOTICE serve as evidence of original intent.
+Any fork preserving this NOTICE is the authoritative continuation.
