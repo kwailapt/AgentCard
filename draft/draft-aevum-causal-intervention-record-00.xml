@@ -1,0 +1,1341 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE rfc [
+  <!ENTITY nbsp    "&#160;">
+  <!ENTITY zwsp   "&#8203;">
+  <!ENTITY nbhy   "&#8209;">
+  <!ENTITY wj     "&#8288;">
+]>
+<rfc xmlns:xi="http://www.w3.org/2001/XInclude"
+     ipr="trust200902"
+     docName="draft-aevum-causal-intervention-record-00"
+     category="info"
+     submissionType="independent"
+     xml:lang="en"
+     version="3">
+
+  <front>
+    <title abbrev="PACR">
+      Physically Annotated Causal Record (PACR): A Wire Format for
+      Verifiable Causal Intervention Events
+    </title>
+
+    <seriesInfo name="Internet-Draft" value="draft-aevum-causal-intervention-record-00"/>
+
+    <author fullname="Kwai Lap Tsoi" initials="K." surname="Tsoi">
+      <organization>Aevum Network</organization>
+      <address>
+        <email>kwailapt@gmail.com</email>
+        <uri>https://github.com/kwailapt/AgentCard</uri>
+      </address>
+    </author>
+
+    <date year="2026" month="April" day="26"/>
+
+    <area>Applications and Real-Time</area>
+    <workgroup>Individual Submission</workgroup>
+
+    <keyword>causal record</keyword>
+    <keyword>intervention</keyword>
+    <keyword>do-calculus</keyword>
+    <keyword>landauer</keyword>
+    <keyword>thermodynamic</keyword>
+    <keyword>provenance</keyword>
+    <keyword>A2A</keyword>
+    <keyword>AI</keyword>
+
+    <abstract>
+      <t>
+        This document defines the Physically Annotated Causal Record
+        (PACR), a wire-format protocol for representing one verifiable
+        causal-intervention event between autonomous agents.  A PACR
+        is a six-tuple (&#x3B9;, &#x3A0;, &#x39B;, &#x3A9;, &#x393;, P)
+        binding a causal identity, a set of causal predecessors, a
+        thermodynamic Landauer cost, an energy-time-space resource
+        triple, a cognitive complexity split, and an opaque payload.
+        The opaque payload optionally carries a one-byte intervention
+        tag classifying the event under Pearl's do-calculus hierarchy
+        (Observe / Do-Physical / Do-Digital / Do-Chemical / Do-Genetic /
+        Counterfactual).
+      </t>
+      <t>
+        PACR is intended as the smallest sufficient statistic for a
+        replayable, rights-aware claim about a single causal step
+        performed by an autonomous agent on a digital, physical, or
+        biological substrate.  It is complementary to AgentCard
+        (draft-aevum-agentcard): AgentCard declares an agent's
+        identity and capabilities; PACR records what an agent actually
+        did and at what physical cost.
+      </t>
+      <t>
+        PACR records form a content-addressed directed acyclic graph
+        through their predecessor set.  Causal order is determined
+        solely by the predecessor edges; no wall-clock timestamp is
+        required for ordering.  This makes the format suitable for
+        distributed multi-agent systems where clock skew and partial
+        ordering are unavoidable.
+      </t>
+    </abstract>
+
+    <note title="Discussion Venues">
+      <t>
+        Discussion of this document should take place on the GitHub
+        repository at https://github.com/kwailapt/AgentCard/issues
+        with the label <tt>pacr-draft</tt>.  A reference Rust
+        implementation <xref target="PACR-SPEC"/> is published as
+        the <tt>pacr-types</tt> crate.
+      </t>
+    </note>
+
+    <note title="Requirements Language">
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL",
+        "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",
+        "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document
+        are to be interpreted as described in BCP 14
+        <xref target="RFC2119"/> <xref target="RFC8174"/>
+        when, and only when, they appear in all capitals, as shown here.
+      </t>
+    </note>
+  </front>
+
+  <middle>
+
+    <section anchor="introduction" numbered="true" toc="default">
+      <name>Introduction</name>
+
+      <t>
+        Multi-agent systems built on top of large language models and
+        autonomous physical infrastructure increasingly require a
+        common format for recording <em>what an agent did</em>, not
+        only <em>what an agent claims to be able to do</em>.  Existing
+        provenance and audit formats describe transactions, signed
+        statements, or workflow traces, but they typically do not
+        record the physical cost of the computation, do not
+        distinguish causal observation from causal intervention, and
+        do not constrain partial ordering through explicit predecessor
+        edges.
+      </t>
+
+      <t>
+        This document specifies a minimal wire format that combines
+        these properties: a single, content-addressed record that
+        captures (i) a globally unique identity, (ii) the set of
+        directly preceding records that caused this one, (iii) the
+        thermodynamic energy floor for the bit-level erasures
+        performed, (iv) the actually measured energy-time-space
+        resource cost, (v) a complexity split into statistical
+        structure and residual unpredictability, and (vi) an opaque
+        payload whose first bytes optionally classify the event as an
+        observation, an intervention, or a counterfactual.
+      </t>
+
+      <t>
+        The format has been designed for use as a substrate-level
+        record in agent-to-agent (A2A) protocols and is independent of
+        any specific transport, storage, or settlement system.  It is
+        a peer to AgentCard <xref target="I-D.aevum-agentcard"/>: an
+        AgentCard says <em>"I am agent X, and I can do Y"</em>; a
+        PACR record says <em>"agent X did Y at cost Z, caused by
+        events {A, B}"</em>.
+      </t>
+
+      <section anchor="goals" numbered="true" toc="default">
+        <name>Design Goals</name>
+        <ol spacing="normal">
+          <li>
+            <strong>Single record, six independent dimensions.</strong>
+            A PACR record carries exactly six fields, each derived
+            from an independent physical or logical principle.
+            Implementations MUST NOT collapse two fields into one and
+            MUST NOT add fields whose semantics overlap with an
+            existing field.
+          </li>
+          <li>
+            <strong>Causal order, not temporal order.</strong>  Records
+            are partially ordered by their predecessor sets.  Wall-clock
+            timestamps MAY appear inside the opaque payload but MUST
+            NOT be used by readers to determine causal order.
+          </li>
+          <li>
+            <strong>Physically grounded cost accounting.</strong>  The
+            Landauer field carries a theoretical energy floor derived
+            from the number of bits irreversibly erased; the resource
+            triple carries the actually measured energy.  The two are
+            distinct and the difference is the thermodynamic waste.
+          </li>
+          <li>
+            <strong>Pearl-hierarchy intervention tag.</strong>  The
+            opaque payload MAY begin with a four-byte magic prefix
+            followed by a one-byte tag classifying the event under
+            Pearl's do-calculus rungs <xref target="PEARL"/>.
+            Counterfactual records MUST additionally carry a
+            sim-real correlation score.
+          </li>
+          <li>
+            <strong>Append-only schema evolution.</strong>  New fields
+            MAY be added to PACR in future revisions.  The semantics
+            of existing fields, including this draft's six dimensions,
+            MUST NOT change.
+          </li>
+          <li>
+            <strong>Zero hidden state.</strong>  A reader who can parse
+            this draft and who has access to the predecessor records
+            referenced by &#x3A0; can fully verify a PACR record
+            without consulting any external service.
+          </li>
+        </ol>
+      </section>
+
+      <section anchor="non-goals" numbered="true" toc="default">
+        <name>Non-Goals</name>
+        <t>
+          This document does not specify:
+        </t>
+        <ul spacing="normal">
+          <li>
+            A transport protocol.  PACR records may be exchanged over
+            HTTP, MCP <xref target="MCP-SPEC"/>, message queues, or
+            written to disk; the wire format is independent.
+          </li>
+          <li>
+            A signature or attestation scheme.  Implementations
+            requiring authenticated records SHOULD wrap a PACR record
+            in a JOSE <xref target="RFC7515"/> or COSE
+            <xref target="RFC9052"/> envelope.
+          </li>
+          <li>
+            A registry, settlement currency, or token system.  A PACR
+            record reports a Landauer cost in joules; conversion to
+            any settlement unit is a layer-above concern.
+          </li>
+          <li>
+            A specific causal-discovery or counterfactual-inference
+            algorithm.  The Counterfactual tag indicates that a
+            simulation produced this record; how the simulation arose
+            is out of scope.
+          </li>
+        </ul>
+      </section>
+    </section>
+
+
+    <section anchor="terminology" numbered="true" toc="default">
+      <name>Terminology</name>
+      <dl newline="false" spacing="normal">
+        <dt>Record:</dt>
+        <dd>
+          One PACR six-tuple as defined in
+          <xref target="six-tuple"/>.
+        </dd>
+        <dt>Predecessor:</dt>
+        <dd>
+          A record whose causal identity appears in the predecessor
+          set &#x3A0; of another record.
+        </dd>
+        <dt>Genesis record:</dt>
+        <dd>
+          A record whose predecessor set is empty.  Genesis records
+          have no causal predecessors and serve as roots of the causal
+          graph.
+        </dd>
+        <dt>Substrate:</dt>
+        <dd>
+          The physical or digital medium on which an intervention
+          acts.  Examples include a population of users, a single
+          cell, a piece of infrastructure, or a digital data stream.
+        </dd>
+        <dt>Intervention:</dt>
+        <dd>
+          A causal action on a substrate, distinct from passive
+          observation.  Pearl's do-calculus <xref target="PEARL"/>
+          formalises the distinction.
+        </dd>
+        <dt>Counterfactual:</dt>
+        <dd>
+          A simulated event that did not actually occur on the
+          substrate; included for "what-if" reasoning.  PACR
+          counterfactuals MUST carry a sim-real correlation score.
+        </dd>
+        <dt>Estimate:</dt>
+        <dd>
+          A measurement reported as a triple (point, lower, upper)
+          with the invariant <tt>lower &lt;= point &lt;= upper</tt>.
+          Several PACR fields use this representation to carry
+          measurement uncertainty.
+        </dd>
+        <dt>Landauer floor:</dt>
+        <dd>
+          The minimum energy required to irreversibly erase a given
+          number of bits at a given temperature, defined by Landauer's
+          principle <xref target="LANDAUER"/>:
+          <tt>&#x39B; = bits &#xD7; k_B &#xD7; T &#xD7; ln 2</tt>.
+        </dd>
+      </dl>
+    </section>
+
+
+    <section anchor="six-tuple" numbered="true" toc="default">
+      <name>The PACR Six-Tuple</name>
+
+      <t>
+        A PACR record is the six-tuple
+      </t>
+      <artwork><![CDATA[
+   R = ( i,  P,  L,  O,  G,  P_payload )
+        |   |   |   |   |   |
+        |   |   |   |   |   +-- payload (opaque bytes)
+        |   |   |   |   +------ cognitive split (S_T, H_T, dH)
+        |   |   |   +---------- resource triple (E, T, S)
+        |   |   +-------------- Landauer cost in joules
+        |   +------------------ predecessor set (causal order)
+        +---------------------- causal identity (128 bits)
+      ]]></artwork>
+      <t>
+        where the Greek letters are written as their ASCII
+        transliterations in the diagram for portability.  The
+        canonical names of the fields are &#x3B9; (iota, identity),
+        &#x3A0; (Pi, predecessors), &#x39B; (Lambda, Landauer cost),
+        &#x3A9; (Omega, resources), &#x393; (Gamma, cognitive split),
+        and P (payload).
+      </t>
+
+      <t>
+        Each of the six fields is REQUIRED.  Implementations MUST
+        reject records in which any of the six is missing or null.
+      </t>
+
+      <section anchor="field-iota" numbered="true" toc="default">
+        <name>i (iota): Causal Identity</name>
+        <t>
+          The causal identity is a 128-bit value that uniquely names
+          this record.  It is the content-address of the record
+          within the causal graph.
+        </t>
+        <t>
+          Implementations MUST treat the 128 bits as opaque for
+          ordering purposes: causal order is derived solely from the
+          predecessor set, not from the bit value.  Implementations
+          MAY use any 128-bit identifier scheme (e.g.,
+          <xref target="ULID-SPEC">ULID</xref> or
+          <xref target="RFC9562">UUIDv7</xref>) so long as the
+          collision probability over the lifetime of the deployment
+          is cryptographically negligible.
+        </t>
+        <t>
+          The reserved value <tt>0x00000000000000000000000000000000</tt>
+          is the genesis sentinel and indicates a record with no
+          causal predecessors that is itself a root of the graph.
+        </t>
+        <t>
+          When serialised in JSON, the identity MUST be encoded as a
+          32-character uppercase hexadecimal string.  Other
+          serialisations (e.g., CBOR <xref target="RFC8949"/>) MAY
+          encode it as a 16-byte byte string.
+        </t>
+      </section>
+
+      <section anchor="field-pi" numbered="true" toc="default">
+        <name>P (Pi): Predecessor Set</name>
+        <t>
+          The predecessor set is an unordered collection of zero or
+          more causal identities, each naming a record that directly
+          caused the current record.  Implementations MUST NOT
+          interpret the order of elements in the set as semantically
+          meaningful.
+        </t>
+        <t>
+          The predecessor set establishes the partial ordering of
+          records.  Readers traversing the causal graph MUST treat
+          two records with disjoint predecessor lineages as
+          concurrent (incomparable), regardless of any timestamp
+          information they may carry in their payloads.
+        </t>
+        <t>
+          A record MUST NOT include its own causal identity in its
+          predecessor set; such a record is malformed and MUST be
+          rejected.
+        </t>
+        <t>
+          For typical agent interactions, predecessor sets contain
+          one to four entries.  Implementations SHOULD optimise for
+          this common case (e.g., using small-vector storage); they
+          MUST also accept arbitrarily large predecessor sets, since
+          some records (e.g., aggregations) legitimately have many
+          causes.
+        </t>
+      </section>
+
+      <section anchor="field-lambda" numbered="true" toc="default">
+        <name>L (Lambda): Landauer Cost</name>
+        <t>
+          The Landauer cost is the theoretical minimum energy in
+          joules required to perform the bit-level erasures recorded
+          by this event, derived from Landauer's principle
+          <xref target="LANDAUER"/>:
+        </t>
+        <artwork><![CDATA[
+       L  =  bits_erased  x  k_B  x  T  x  ln 2
+        ]]></artwork>
+        <t>
+          where <tt>k_B = 1.380649e-23 J/K</tt> is Boltzmann's
+          constant <xref target="CODATA"/>, <tt>T</tt> is the
+          temperature of the computing substrate in kelvin, and
+          <tt>bits_erased</tt> is the number of bits irreversibly
+          erased while producing this record.  At a reference
+          temperature of 300 K, the per-bit floor is approximately
+          <tt>2.854e-21 J</tt>.
+        </t>
+        <t>
+          The Landauer cost MUST be a non-negative Estimate (see
+          <xref target="estimate"/>).  Negative point estimates are
+          ill-defined and MUST cause validation to fail.
+        </t>
+        <t>
+          The Landauer cost is a lower bound, not the actual energy
+          consumed.  The actual energy is reported separately in the
+          resource triple.  The difference between the two is the
+          thermodynamic waste of the event.
+        </t>
+      </section>
+
+      <section anchor="field-omega" numbered="true" toc="default">
+        <name>O (Omega): Resource Triple</name>
+        <t>
+          The resource triple reports the actually measured cost of
+          the event along three axes:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>energy:</dt>
+          <dd>
+            Actual energy consumed in joules, including waste heat
+            and overheads beyond the Landauer floor.
+          </dd>
+          <dt>time:</dt>
+          <dd>
+            Wall-clock execution duration in seconds.  Despite using
+            seconds, this value MUST NOT be used for causal ordering;
+            it is a resource cost only.
+          </dd>
+          <dt>space:</dt>
+          <dd>
+            Memory or storage footprint in bytes (encoded as a
+            floating-point number for SI-unit consistency with the
+            other two axes).
+          </dd>
+        </dl>
+        <t>
+          Each of the three axes MUST be an Estimate (see
+          <xref target="estimate"/>).  The triple is subject to two
+          physical constraints:
+        </t>
+        <ul spacing="normal">
+          <li>
+            <strong>Landauer floor:</strong>
+            <tt>energy.point &gt;= L.point</tt>.  The actually
+            measured energy MUST NOT be below the theoretical floor.
+          </li>
+          <li>
+            <strong>Margolus-Levitin bound</strong>
+            <xref target="MARGOLUS"/>:
+            <tt>time.point &gt;= pi * h_bar / (2 * energy.point)</tt>
+            for non-zero energy, where
+            <tt>h_bar = 1.054571817e-34 J&#xD7;s</tt>.  This bound is
+            of practical relevance only at femtojoule scales but MUST
+            be checked for completeness.
+          </li>
+        </ul>
+        <t>
+          A record violating either constraint is malformed.
+          Implementations MAY still store such records for forensic
+          purposes (measurement errors do occur), but they MUST flag
+          the violation in any downstream validation report.
+        </t>
+      </section>
+
+      <section anchor="field-gamma" numbered="true" toc="default">
+        <name>G (Gamma): Cognitive Split</name>
+        <t>
+          The cognitive split decomposes the information-theoretic
+          structure of the data stream associated with this event:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>statistical_complexity (S_T):</dt>
+          <dd>
+            Statistical complexity in bits, measuring the minimum
+            information required to optimally predict the stream.
+            Computed via an epsilon-machine reconstruction
+            <xref target="CRUTCHFIELD"/>.
+          </dd>
+          <dt>entropy_rate (H_T):</dt>
+          <dd>
+            Entropy rate in bits per symbol, measuring the residual
+            unpredictability of the stream even given the optimal
+            predictor.
+          </dd>
+          <dt>info_gain (dH):</dt>
+          <dd>
+            Information gain in bits, equal to the entropy reduction
+            <tt>H_T_before - H_T_after</tt> attributable to processing
+            this record.  This field was added in a later revision of
+            the reference implementation; readers parsing earlier
+            records MUST treat its absence as a value of
+            <tt>0.0</tt> with zero uncertainty.
+          </dd>
+        </dl>
+        <t>
+          All three values MUST be non-negative Estimates.  Negative
+          point estimates are ill-defined and MUST cause validation
+          to fail.
+        </t>
+        <t>
+          Statistical complexity and entropy rate are observer-
+          dependent quantities: they depend on the symbol alphabet
+          and the time scale at which the stream is sampled.
+          Implementations exchanging records MUST agree on the
+          discretisation, either through prior arrangement or by
+          recording the discretisation parameters inside the opaque
+          payload.
+        </t>
+      </section>
+
+      <section anchor="field-payload" numbered="true" toc="default">
+        <name>P (Payload): Opaque Application Data</name>
+        <t>
+          The payload is an arbitrary byte string carrying
+          application-specific semantics.  PACR does not interpret
+          this field except to optionally extract a Pearl-hierarchy
+          tag from its first bytes (see <xref target="tagged-payload"/>).
+        </t>
+        <t>
+          Upper-layer protocols (e.g., AgentCard
+          <xref target="I-D.aevum-agentcard"/>) define their own
+          schemas inside this field.  PACR readers that do not
+          understand the upper-layer schema MUST still accept and
+          forward the record; they MUST NOT alter the payload bytes
+          in any way.
+        </t>
+        <t>
+          A payload MAY be empty.  An empty payload denotes an event
+          with no application-level content, such as a heartbeat or a
+          synthetic genesis record.
+        </t>
+      </section>
+    </section>
+
+
+    <section anchor="estimate" numbered="true" toc="default">
+      <name>Estimate Type</name>
+
+      <t>
+        Several PACR fields carry physical measurements that are
+        inherently uncertain.  These fields use a common Estimate
+        representation: an object with three numeric values
+        <tt>point</tt>, <tt>lower</tt>, and <tt>upper</tt>, subject
+        to the invariant
+      </t>
+      <artwork><![CDATA[
+       lower  <=  point  <=  upper
+      ]]></artwork>
+      <t>
+        where <tt>point</tt> is the best single-value estimate (for
+        example the median or mean of a sample), and
+        <tt>[lower, upper]</tt> is a confidence interval.  A 95 %
+        confidence interval is RECOMMENDED, but the chosen confidence
+        level is implementation-defined and MAY be reported in the
+        opaque payload.  The choice MUST remain consistent within a
+        single deployment.
+      </t>
+
+      <t>
+        For quantities known with mathematical certainty (e.g., a
+        bit count), an Estimate with <tt>point = lower = upper</tt>
+        MAY be used.  Floating-point equality is physically
+        meaningless; consumers comparing two Estimates MUST do so
+        through interval-overlap checks rather than exact equality.
+      </t>
+
+      <t>
+        Implementations MUST reject Estimates whose values do not
+        satisfy the ordering invariant.  Recovery from invalid
+        Estimates is implementation-defined.
+      </t>
+    </section>
+
+
+    <section anchor="tagged-payload" numbered="true" toc="default">
+      <name>Tagged Payload and Intervention Kind</name>
+
+      <t>
+        A PACR payload MAY begin with the four-byte magic prefix
+        <tt>0x50 0x41 0x43 0x52</tt> (ASCII <tt>"PACR"</tt>) to
+        indicate that the payload carries an intervention tag.
+        Payloads without this prefix are <em>legacy</em> payloads and
+        MUST be treated as if they carried the tag
+        <tt>Observe</tt>.
+      </t>
+
+      <section anchor="tagged-layout" numbered="true" toc="default">
+        <name>Wire Layout</name>
+        <artwork><![CDATA[
+   Bytes  0..4   magic = "PACR" (0x50 0x41 0x43 0x52)
+   Byte   4      kind byte (see Section 5.2)
+   Bytes  5..13  sim_real_corr as f64 big-endian
+                 -- ONLY IF kind == Counterfactual
+   Bytes  5..    inner application payload
+                 -- when kind != Counterfactual
+   Bytes  13..   inner application payload
+                 -- when kind == Counterfactual
+        ]]></artwork>
+      </section>
+
+      <section anchor="tagged-kinds" numbered="true" toc="default">
+        <name>Intervention Kinds</name>
+        <t>
+          The intervention kind classifies the event under Pearl's
+          three-rung do-calculus hierarchy
+          <xref target="PEARL"/>.  This document defines six kinds,
+          encoded as the byte values shown:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>0x00 -- Observe (Pearl rung 1):</dt>
+          <dd>
+            A passive observation of the substrate.  No causal action
+            was taken.
+          </dd>
+          <dt>0x01 -- DoPhysical (Pearl rung 2):</dt>
+          <dd>
+            A physical-world action.  Examples: a robot actuator
+            command, a sensor calibration, a laboratory pipetting step.
+          </dd>
+          <dt>0x02 -- DoDigital (Pearl rung 2):</dt>
+          <dd>
+            A digital action against an external system.  Examples:
+            an HTTP API call, a settlement message, a routing
+            decision in a multi-agent system.
+          </dd>
+          <dt>0x03 -- DoChemical (Pearl rung 2):</dt>
+          <dd>
+            A chemical or biological perturbation.  Examples: applying
+            a small-molecule compound to a culture, dosing an animal
+            model.
+          </dd>
+          <dt>0x04 -- DoGenetic (Pearl rung 2):</dt>
+          <dd>
+            A genetic edit.  Examples: a CRISPR guide-RNA delivery,
+            a directed-evolution selection round.
+          </dd>
+          <dt>0x05 -- Counterfactual (Pearl rung 3):</dt>
+          <dd>
+            A simulated event that did not occur on the real
+            substrate.  Counterfactual records carry the additional
+            <tt>sim_real_corr</tt> field described below.
+          </dd>
+        </dl>
+        <t>
+          Future revisions of this document MAY define additional
+          kinds with byte values 0x06 through 0xFF.  Readers
+          encountering an unknown kind byte MUST reject the record
+          rather than guess; this preserves the append-only contract.
+        </t>
+      </section>
+
+      <section anchor="sim-real-corr" numbered="true" toc="default">
+        <name>Sim-Real Correlation</name>
+        <t>
+          A Counterfactual record MUST carry a <tt>sim_real_corr</tt>
+          value in the range <tt>[0.0, 1.0]</tt>, encoded as an
+          IEEE 754 double-precision number in big-endian byte order
+          immediately following the kind byte.  The value reports the
+          observed correlation between simulated outcomes and the
+          historical real-substrate outcomes for analogous setups.
+        </t>
+        <t>
+          A Counterfactual record without a sim-real correlation
+          score, or with a score outside <tt>[0.0, 1.0]</tt>, is
+          malformed and MUST be rejected.  This requirement prevents
+          counterfactual claims from being treated as substrate-truth
+          without a stated calibration.
+        </t>
+      </section>
+    </section>
+
+
+    <section anchor="validation" numbered="true" toc="default">
+      <name>Validation Rules</name>
+
+      <t>
+        An implementation that validates a PACR record MUST check
+        each of the following conditions and MUST report a violation
+        for any condition that fails.  A record may have multiple
+        violations; implementations SHOULD report all of them rather
+        than stopping at the first.
+      </t>
+
+      <ol spacing="normal">
+        <li>
+          <strong>Required fields present.</strong>  All six fields
+          (&#x3B9;, &#x3A0;, &#x39B;, &#x3A9;, &#x393;, P) MUST be
+          present.  Missing fields MUST cause rejection.
+        </li>
+        <li>
+          <strong>No self-reference.</strong>  &#x3B9; MUST NOT
+          appear in &#x3A0;.
+        </li>
+        <li>
+          <strong>Estimate invariants.</strong>  Every Estimate value
+          MUST satisfy <tt>lower &lt;= point &lt;= upper</tt>.
+        </li>
+        <li>
+          <strong>Non-negative physical quantities.</strong>  &#x39B;,
+          the energy and space components of &#x3A9;, the statistical
+          complexity, the entropy rate, and the information gain MUST
+          have non-negative point estimates.
+        </li>
+        <li>
+          <strong>Strictly positive time.</strong>  The time
+          component of &#x3A9; MUST have a strictly positive point
+          estimate.
+        </li>
+        <li>
+          <strong>Landauer floor.</strong>  The energy point
+          estimate MUST be greater than or equal to the &#x39B;
+          point estimate.
+        </li>
+        <li>
+          <strong>Margolus-Levitin bound.</strong>  For non-zero
+          energy, the time point estimate MUST satisfy
+          <tt>time &gt;= pi * h_bar / (2 * energy)</tt>.
+        </li>
+        <li>
+          <strong>Tagged payload integrity.</strong>  If the payload
+          begins with the magic prefix, the payload MUST contain at
+          least the kind byte (and, for Counterfactual records, the
+          sim-real correlation field).  An unknown kind byte MUST
+          cause rejection.
+        </li>
+        <li>
+          <strong>Counterfactual sim-real range.</strong>  A
+          Counterfactual record MUST have
+          <tt>0.0 &lt;= sim_real_corr &lt;= 1.0</tt>.
+        </li>
+      </ol>
+    </section>
+
+
+    <section anchor="encoding" numbered="true" toc="default">
+      <name>Encodings</name>
+
+      <t>
+        This document does not mandate a single binary encoding.  Two
+        canonical encodings are described below; deployments MAY use
+        either or both.
+      </t>
+
+      <section anchor="encoding-json" numbered="true" toc="default">
+        <name>JSON Encoding</name>
+        <t>
+          A PACR record MAY be serialised as a JSON object
+          <xref target="RFC8259"/> with the following fields:
+        </t>
+        <artwork><![CDATA[
+{
+  "id": "01HZQK3P8EMXR9V7T5N2W4J6C0",
+  "predecessors": [
+    "01HZQK3P8EMXR9V7T5N2W4J6BQ",
+    "01HZQK3P8EMXR9V7T5N2W4J6BR"
+  ],
+  "landauer_cost": {
+    "point": 2.854e-21,
+    "lower": 2.713e-21,
+    "upper": 2.998e-21
+  },
+  "resources": {
+    "energy": { "point": 4.0e-19, "lower": 3.8e-19, "upper": 4.2e-19 },
+    "time":   { "point": 1.2e-3,  "lower": 1.18e-3, "upper": 1.22e-3 },
+    "space":  { "point": 4096.0,  "lower": 4096.0,  "upper": 4096.0 }
+  },
+  "cognitive_split": {
+    "statistical_complexity":
+        { "point": 3.4,  "lower": 3.1,  "upper": 3.7  },
+    "entropy_rate":
+        { "point": 0.92, "lower": 0.88, "upper": 0.95 },
+    "info_gain":
+        { "point": 0.07, "lower": 0.04, "upper": 0.10 }
+  },
+  "payload": "UEFDUgIA"
+}
+        ]]></artwork>
+        <t>
+          Identities are encoded as 32-character uppercase hexadecimal
+          strings.  The payload is encoded using base64
+          <xref target="RFC4648"/> without padding-stripping.  All
+          numeric values use IEEE 754 double-precision semantics; JSON
+          numbers without a decimal point or exponent retain integer
+          interpretation per <xref target="RFC8259"/>.
+        </t>
+      </section>
+
+      <section anchor="encoding-cbor" numbered="true" toc="default">
+        <name>CBOR Encoding</name>
+        <t>
+          A PACR record MAY be serialised as a CBOR
+          <xref target="RFC8949"/> map with the same field names as
+          the JSON encoding.  Identities MUST be encoded as 16-byte
+          byte strings (CBOR major type 2).  Estimates are encoded as
+          three-element CBOR arrays in the order
+          <tt>[point, lower, upper]</tt>.  Payloads are encoded as
+          CBOR byte strings.
+        </t>
+        <t>
+          The CBOR encoding is RECOMMENDED for high-throughput
+          deployments where the JSON overhead is significant.
+        </t>
+      </section>
+    </section>
+
+
+    <section anchor="relationship" numbered="true" toc="default">
+      <name>Relationship to Other Specifications</name>
+
+      <section anchor="rel-agentcard" numbered="true" toc="default">
+        <name>AgentCard</name>
+        <t>
+          AgentCard <xref target="I-D.aevum-agentcard"/> declares
+          what an agent is and what it can do.  PACR records what an
+          agent did.  AgentCards are typically static; PACR records
+          are append-only event streams.
+        </t>
+        <t>
+          A common deployment pattern is for an agent to publish an
+          AgentCard containing its identity and capabilities, and for
+          every action that agent takes to be recorded as a PACR
+          record whose payload references the AgentCard's identity
+          and the capability invoked.
+        </t>
+      </section>
+
+      <section anchor="rel-jose-cose" numbered="true" toc="default">
+        <name>JOSE / COSE</name>
+        <t>
+          PACR does not define an authentication mechanism.
+          Deployments that require authenticated PACR records SHOULD
+          wrap each record in a JOSE <xref target="RFC7515"/> or COSE
+          <xref target="RFC9052"/> envelope and use the wrapper's
+          signature semantics.  The PACR identity field is suitable
+          as the JOSE/COSE message identifier.
+        </t>
+      </section>
+
+      <section anchor="rel-w3c-prov" numbered="true" toc="default">
+        <name>W3C PROV-O</name>
+        <t>
+          The W3C PROV ontology <xref target="W3C-PROV"/> models
+          provenance using activities, agents, and entities, and is
+          designed for description in RDF.  PACR is a complementary,
+          line-protocol-style format with a fixed six-tuple structure
+          and an explicit thermodynamic cost field.  A PROV-O
+          activity MAY be derived from a PACR record by mapping
+          &#x3B9; to <tt>prov:Activity</tt>, &#x3A0; to
+          <tt>prov:wasInformedBy</tt>, and the payload to
+          <tt>prov:value</tt>.
+        </t>
+      </section>
+
+      <section anchor="rel-mcp" numbered="true" toc="default">
+        <name>Model Context Protocol</name>
+        <t>
+          MCP <xref target="MCP-SPEC"/> defines a protocol for
+          communication between language-model hosts and tool
+          servers.  An MCP tool call MAY produce a PACR record as a
+          side effect of execution; the PACR record's payload MAY
+          embed the MCP request and response identifiers.  This
+          document does not require any specific MCP integration.
+        </t>
+      </section>
+    </section>
+
+
+    <section anchor="security" numbered="true" toc="default">
+      <name>Security Considerations</name>
+
+      <section anchor="sec-spoofing" numbered="true" toc="default">
+        <name>Cost Spoofing</name>
+        <t>
+          A malicious or buggy producer may report a Landauer cost
+          or resource triple lower than the actual physical cost of
+          the event.  PACR's validation rules detect impossibly low
+          costs (e.g., negative energy, energy below the Landauer
+          floor at the producer's stated temperature) but do not
+          detect plausibly low costs.  Consumers who use PACR records
+          for economic settlement or capacity planning SHOULD
+          independently corroborate cost claims (for example, by
+          comparing reported energy against observed latency and
+          throughput) before acting on them.
+        </t>
+      </section>
+
+      <section anchor="sec-fabricated-predecessors" numbered="true" toc="default">
+        <name>Fabricated Predecessors</name>
+        <t>
+          A malicious producer may include in the predecessor set
+          identities that the producer does not actually possess
+          knowledge of, intending to claim a causal lineage it did
+          not participate in.  PACR does not by itself prevent this:
+          a consumer must verify that the referenced predecessor
+          records exist in a trusted store and that they precede the
+          current record in the consumer's view of the causal graph.
+          Implementations SHOULD reject a record whose predecessor
+          set references unknown identities until the predecessors
+          have been resolved.
+        </t>
+      </section>
+
+      <section anchor="sec-payload-injection" numbered="true" toc="default">
+        <name>Payload Injection</name>
+        <t>
+          The opaque payload MAY contain arbitrary bytes including
+          executable code, malformed structured data, or content that
+          attempts to exploit the consumer's parser.  Consumers MUST
+          treat the payload as untrusted input and apply normal
+          parser-hardening practices (e.g., strict schema validation,
+          length limits, never <tt>eval</tt>-ing the bytes).  PACR
+          itself does not interpret the payload.
+        </t>
+      </section>
+
+      <section anchor="sec-pii" numbered="true" toc="default">
+        <name>Personally Identifiable Information</name>
+        <t>
+          PACR's six structural fields do not carry personally
+          identifiable information (PII).  Producers MAY embed PII in
+          the opaque payload.  Doing so makes the PACR record subject
+          to the same privacy controls (consent, retention, lawful
+          basis) as any other PII-bearing data.  Implementations
+          intended for use in regulated environments SHOULD
+          partition PII-bearing payloads from non-PII payloads at
+          the storage layer.
+        </t>
+      </section>
+
+      <section anchor="sec-counterfactual-misuse" numbered="true" toc="default">
+        <name>Counterfactual Misuse</name>
+        <t>
+          A Counterfactual record describes a simulated event, not a
+          real-substrate event.  Confusion between the two could
+          lead to substantial harm in safety-critical contexts (for
+          example, an autonomous-driving system mistakenly treating a
+          counterfactual scenario as observed reality).  Consumers
+          MUST inspect the intervention kind before treating a record
+          as evidence of substrate state, and SHOULD render
+          counterfactual records distinctly in any user interface.
+          The mandatory <tt>sim_real_corr</tt> field is intended as
+          a calibration hint, not as a guarantee.
+        </t>
+      </section>
+
+      <section anchor="sec-graph-dos" numbered="true" toc="default">
+        <name>Graph Denial-of-Service</name>
+        <t>
+          A producer may construct records with very large
+          predecessor sets, or whose graph forms a deep chain, in an
+          attempt to exhaust consumer resources during traversal.
+          Implementations SHOULD impose configurable per-record limits
+          (predecessor-set cardinality, payload size) and per-traversal
+          limits (depth, total node count) and SHOULD reject or
+          truncate records that exceed them.
+        </t>
+      </section>
+
+      <section anchor="sec-replay" numbered="true" toc="default">
+        <name>Replay</name>
+        <t>
+          PACR does not include a sequence number, nonce, or signature.
+          A captured record MAY be replayed by a network attacker.
+          Deployments MUST rely on transport-layer or wrapper-layer
+          mechanisms (TLS, JOSE/COSE, MCP transport authentication)
+          to detect and reject replays where this is a concern.
+        </t>
+      </section>
+    </section>
+
+
+    <section anchor="iana" numbered="true" toc="default">
+      <name>IANA Considerations</name>
+
+      <section anchor="iana-media-type-json" numbered="true" toc="default">
+        <name>Media Type Registration: application/pacr+json</name>
+        <t>
+          This document requests that IANA register the following
+          media type in the "Media Types" registry
+          <xref target="RFC6838"/>:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>Type name:</dt><dd>application</dd>
+          <dt>Subtype name:</dt><dd>pacr+json</dd>
+          <dt>Required parameters:</dt><dd>none</dd>
+          <dt>Optional parameters:</dt><dd>none</dd>
+          <dt>Encoding considerations:</dt>
+          <dd>binary (UTF-8 JSON object)</dd>
+          <dt>Security considerations:</dt>
+          <dd>See <xref target="security"/>.</dd>
+          <dt>Published specification:</dt>
+          <dd>This document.</dd>
+          <dt>Applications that use this media type:</dt>
+          <dd>
+            Multi-agent systems, AI-agent provenance ledgers, MCP
+            servers and adapters, and any deployment that records
+            verifiable causal-intervention events with thermodynamic
+            cost annotations.
+          </dd>
+          <dt>Additional information:</dt>
+          <dd>
+            <dl newline="false" spacing="normal">
+              <dt>Magic number(s):</dt><dd>none</dd>
+              <dt>File extension(s):</dt><dd>.pacr.json</dd>
+              <dt>Macintosh file type code(s):</dt><dd>none</dd>
+            </dl>
+          </dd>
+          <dt>Person and email address to contact for further information:</dt>
+          <dd>
+            Kwai Lap Tsoi &lt;kwailapt@gmail.com&gt;
+          </dd>
+          <dt>Intended usage:</dt><dd>COMMON</dd>
+          <dt>Restrictions on usage:</dt><dd>none</dd>
+          <dt>Author:</dt>
+          <dd>Kwai Lap Tsoi &lt;kwailapt@gmail.com&gt;</dd>
+          <dt>Change controller:</dt><dd>IETF</dd>
+        </dl>
+      </section>
+
+      <section anchor="iana-media-type-cbor" numbered="true" toc="default">
+        <name>Media Type Registration: application/pacr+cbor</name>
+        <t>
+          This document requests that IANA register the following
+          media type in the "Media Types" registry
+          <xref target="RFC6838"/>:
+        </t>
+        <dl newline="false" spacing="normal">
+          <dt>Type name:</dt><dd>application</dd>
+          <dt>Subtype name:</dt><dd>pacr+cbor</dd>
+          <dt>Required parameters:</dt><dd>none</dd>
+          <dt>Optional parameters:</dt><dd>none</dd>
+          <dt>Encoding considerations:</dt>
+          <dd>binary (CBOR map per RFC 8949)</dd>
+          <dt>Security considerations:</dt>
+          <dd>See <xref target="security"/>.</dd>
+          <dt>Published specification:</dt>
+          <dd>This document.</dd>
+          <dt>Applications that use this media type:</dt>
+          <dd>
+            High-throughput PACR deployments where JSON encoding
+            overhead is significant.
+          </dd>
+          <dt>Additional information:</dt>
+          <dd>
+            <dl newline="false" spacing="normal">
+              <dt>Magic number(s):</dt><dd>none</dd>
+              <dt>File extension(s):</dt><dd>.pacr.cbor</dd>
+              <dt>Macintosh file type code(s):</dt><dd>none</dd>
+            </dl>
+          </dd>
+          <dt>Person and email address to contact for further information:</dt>
+          <dd>
+            Kwai Lap Tsoi &lt;kwailapt@gmail.com&gt;
+          </dd>
+          <dt>Intended usage:</dt><dd>COMMON</dd>
+          <dt>Restrictions on usage:</dt><dd>none</dd>
+          <dt>Author:</dt>
+          <dd>Kwai Lap Tsoi &lt;kwailapt@gmail.com&gt;</dd>
+          <dt>Change controller:</dt><dd>IETF</dd>
+        </dl>
+      </section>
+
+      <section anchor="iana-intervention-kind-registry" numbered="true" toc="default">
+        <name>PACR Intervention Kind Registry</name>
+        <t>
+          This document requests that IANA establish a new registry
+          named "PACR Intervention Kind" with the following initial
+          contents.  The assignment policy is "Specification Required"
+          per <xref target="RFC8126"/>.
+        </t>
+        <table>
+          <thead>
+            <tr><th>Value</th><th>Name</th><th>Pearl Rung</th><th>Reference</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>0x00</td><td>Observe</td><td>1</td><td>This document</td></tr>
+            <tr><td>0x01</td><td>DoPhysical</td><td>2</td><td>This document</td></tr>
+            <tr><td>0x02</td><td>DoDigital</td><td>2</td><td>This document</td></tr>
+            <tr><td>0x03</td><td>DoChemical</td><td>2</td><td>This document</td></tr>
+            <tr><td>0x04</td><td>DoGenetic</td><td>2</td><td>This document</td></tr>
+            <tr><td>0x05</td><td>Counterfactual</td><td>3</td><td>This document</td></tr>
+          </tbody>
+        </table>
+        <t>
+          Values 0x06 through 0xFE are unassigned.  Value 0xFF is
+          reserved.  New assignments require a published
+          specification that defines the semantics of the kind, any
+          additional payload fields it requires, and any additional
+          validation rules.
+        </t>
+      </section>
+    </section>
+
+  </middle>
+
+  <back>
+    <references>
+      <name>References</name>
+
+      <references>
+        <name>Normative References</name>
+
+        <reference anchor="RFC2119">
+          <front>
+            <title>Key words for use in RFCs to Indicate Requirement Levels</title>
+            <author fullname="S. Bradner" initials="S." surname="Bradner"/>
+            <date month="March" year="1997"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="2119"/>
+          <seriesInfo name="DOI" value="10.17487/RFC2119"/>
+        </reference>
+
+        <reference anchor="RFC8174">
+          <front>
+            <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+            <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+            <date month="May" year="2018"/>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="8174"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8174"/>
+        </reference>
+
+        <reference anchor="RFC8259">
+          <front>
+            <title>The JavaScript Object Notation (JSON) Data Interchange Format</title>
+            <author fullname="T. Bray" initials="T." role="editor" surname="Bray"/>
+            <date month="December" year="2017"/>
+          </front>
+          <seriesInfo name="STD" value="90"/>
+          <seriesInfo name="RFC" value="8259"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8259"/>
+        </reference>
+
+        <reference anchor="RFC8949">
+          <front>
+            <title>Concise Binary Object Representation (CBOR)</title>
+            <author fullname="C. Bormann" initials="C." surname="Bormann"/>
+            <author fullname="P. Hoffman" initials="P." surname="Hoffman"/>
+            <date month="December" year="2020"/>
+          </front>
+          <seriesInfo name="STD" value="94"/>
+          <seriesInfo name="RFC" value="8949"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8949"/>
+        </reference>
+
+        <reference anchor="RFC4648">
+          <front>
+            <title>The Base16, Base32, and Base64 Data Encodings</title>
+            <author fullname="S. Josefsson" initials="S." surname="Josefsson"/>
+            <date month="October" year="2006"/>
+          </front>
+          <seriesInfo name="RFC" value="4648"/>
+          <seriesInfo name="DOI" value="10.17487/RFC4648"/>
+        </reference>
+
+        <reference anchor="RFC6838">
+          <front>
+            <title>Media Type Specifications and Registration Procedures</title>
+            <author fullname="N. Freed" initials="N." surname="Freed"/>
+            <author fullname="J. Klensin" initials="J." surname="Klensin"/>
+            <author fullname="T. Hansen" initials="T." surname="Hansen"/>
+            <date month="January" year="2013"/>
+          </front>
+          <seriesInfo name="BCP" value="13"/>
+          <seriesInfo name="RFC" value="6838"/>
+          <seriesInfo name="DOI" value="10.17487/RFC6838"/>
+        </reference>
+
+        <reference anchor="RFC8126">
+          <front>
+            <title>Guidelines for Writing an IANA Considerations Section in RFCs</title>
+            <author fullname="M. Cotton" initials="M." surname="Cotton"/>
+            <author fullname="B. Leiba" initials="B." surname="Leiba"/>
+            <author fullname="T. Narten" initials="T." surname="Narten"/>
+            <date month="June" year="2017"/>
+          </front>
+          <seriesInfo name="BCP" value="26"/>
+          <seriesInfo name="RFC" value="8126"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8126"/>
+        </reference>
+
+        <reference anchor="LANDAUER"
+                   target="https://doi.org/10.1147/rd.53.0183">
+          <front>
+            <title>Irreversibility and Heat Generation in the Computing Process</title>
+            <author fullname="R. Landauer" initials="R." surname="Landauer"/>
+            <date year="1961"/>
+          </front>
+          <seriesInfo name="IBM Journal of Research and Development"
+                      value="5(3):183-191"/>
+        </reference>
+
+      </references>
+
+      <references>
+        <name>Informative References</name>
+
+        <reference anchor="RFC7515">
+          <front>
+            <title>JSON Web Signature (JWS)</title>
+            <author fullname="M. Jones" initials="M." surname="Jones"/>
+            <author fullname="J. Bradley" initials="J." surname="Bradley"/>
+            <author fullname="N. Sakimura" initials="N." surname="Sakimura"/>
+            <date month="May" year="2015"/>
+          </front>
+          <seriesInfo name="RFC" value="7515"/>
+          <seriesInfo name="DOI" value="10.17487/RFC7515"/>
+        </reference>
+
+        <reference anchor="RFC9052">
+          <front>
+            <title>CBOR Object Signing and Encryption (COSE): Structures and Process</title>
+            <author fullname="J. Schaad" initials="J." surname="Schaad"/>
+            <date month="August" year="2022"/>
+          </front>
+          <seriesInfo name="STD" value="96"/>
+          <seriesInfo name="RFC" value="9052"/>
+          <seriesInfo name="DOI" value="10.17487/RFC9052"/>
+        </reference>
+
+        <reference anchor="RFC9562">
+          <front>
+            <title>Universally Unique IDentifiers (UUIDs)</title>
+            <author fullname="K. Davis" initials="K." surname="Davis"/>
+            <author fullname="B. Peabody" initials="B." surname="Peabody"/>
+            <author fullname="P. Leach" initials="P." surname="Leach"/>
+            <date month="May" year="2024"/>
+          </front>
+          <seriesInfo name="RFC" value="9562"/>
+          <seriesInfo name="DOI" value="10.17487/RFC9562"/>
+        </reference>
+
+        <reference anchor="I-D.aevum-agentcard"
+                   target="https://datatracker.ietf.org/doc/draft-aevum-agentcard/">
+          <front>
+            <title>AgentCard: A Framework-Neutral Identity and Capability Declaration Format for Agent-to-Agent Communication</title>
+            <author fullname="Kwai Lap Tsoi" initials="K." surname="Tsoi"/>
+            <date year="2026"/>
+          </front>
+          <seriesInfo name="Internet-Draft"
+                      value="draft-aevum-agentcard-00"/>
+        </reference>
+
+        <reference anchor="ULID-SPEC"
+                   target="https://github.com/ulid/spec">
+          <front>
+            <title>ULID Specification</title>
+            <author fullname="Alizain Feerasta" surname="Feerasta"/>
+            <date year="2019"/>
+          </front>
+        </reference>
+
+        <reference anchor="MCP-SPEC"
+                   target="https://modelcontextprotocol.io/specification">
+          <front>
+            <title>Model Context Protocol Specification</title>
+            <author>
+              <organization>Anthropic</organization>
+            </author>
+            <date year="2024"/>
+          </front>
+        </reference>
+
+        <reference anchor="PEARL"
+                   target="https://doi.org/10.1017/CBO9780511803161">
+          <front>
+            <title>Causality: Models, Reasoning, and Inference</title>
+            <author fullname="Judea Pearl" initials="J." surname="Pearl"/>
+            <date year="2009"/>
+          </front>
+          <seriesInfo name="Cambridge University Press" value="2nd ed."/>
+        </reference>
+
+        <reference anchor="MARGOLUS"
+                   target="https://doi.org/10.1016/0167-2789(98)00054-2">
+          <front>
+            <title>The Maximum Speed of Dynamical Evolution</title>
+            <author fullname="N. Margolus" initials="N." surname="Margolus"/>
+            <author fullname="L. B. Levitin" initials="L." surname="Levitin"/>
+            <date year="1998"/>
+          </front>
+          <seriesInfo name="Physica D" value="120(1-2):188-195"/>
+        </reference>
+
+        <reference anchor="CRUTCHFIELD"
+                   target="https://doi.org/10.1063/1.1530990">
+          <front>
+            <title>Computational Mechanics: Pattern and Prediction, Structure and Simplicity</title>
+            <author fullname="J. P. Crutchfield" initials="J." surname="Crutchfield"/>
+            <author fullname="C. R. Shalizi" initials="C." surname="Shalizi"/>
+            <date year="2001"/>
+          </front>
+          <seriesInfo name="Journal of Statistical Physics" value="104:817-879"/>
+        </reference>
+
+        <reference anchor="CODATA"
+                   target="https://physics.nist.gov/cuu/Constants/">
+          <front>
+            <title>CODATA Recommended Values of the Fundamental Physical Constants: 2018</title>
+            <author>
+              <organization>NIST</organization>
+            </author>
+            <date year="2019"/>
+          </front>
+        </reference>
+
+        <reference anchor="W3C-PROV"
+                   target="https://www.w3.org/TR/prov-o/">
+          <front>
+            <title>PROV-O: The PROV Ontology</title>
+            <author fullname="T. Lebo" initials="T." surname="Lebo"/>
+            <author fullname="S. Sahoo" initials="S." surname="Sahoo"/>
+            <author fullname="D. McGuinness" initials="D." surname="McGuinness"/>
+            <date year="2013"/>
+          </front>
+        </reference>
+
+        <reference anchor="PACR-SPEC"
+                   target="https://github.com/kwailapt/AgentCard/tree/main/crates/pacr-types">
+          <front>
+            <title>pacr-types: Reference Implementation of the PACR 6-Tuple in Rust</title>
+            <author fullname="Kwai Lap Tsoi" surname="Tsoi"/>
+            <date year="2026"/>
+          </front>
+        </reference>
+
+      </references>
+    </references>
+
+    <section anchor="acknowledgements" numbered="false" toc="default">
+      <name>Acknowledgements</name>
+      <t>
+        The PACR six-tuple structure was developed in the context of
+        the Aevum Network specification work over 2026.  The author
+        thanks reviewers of the AgentCard draft
+        (<xref target="I-D.aevum-agentcard"/>) for early feedback
+        that motivated the separation of capability declaration
+        (AgentCard) from event recording (PACR).
+      </t>
+      <t>
+        The Pearl-hierarchy intervention tag was added after
+        practical use of an untagged predecessor format made it clear
+        that downstream consumers cannot reliably distinguish
+        observations from interventions without an explicit marker.
+      </t>
+    </section>
+
+  </back>
+</rfc>
