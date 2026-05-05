@@ -1,0 +1,128 @@
+{
+  "agent_id": "01JE0POPVALIDPOP0000000001",
+  "name": "PV1 Population Validator",
+  "version": "1.1.0",
+  "description": "Layer 4: Cross-substrate population validator. One query produces two validation dimensions simultaneously — (a) GTEx eQTL: Molecular→Cellular sim_real_corr (fast-loop proxy, ms-scale), (b) UKB GWAS: Population-level p-value (slow-loop validation, days-to-months). Enforces OPR-2 per-substrate ρ isolation (UKB_European EMA ≠ ChinaMAP_EAS EMA) and OPR-5 federation gate (ossification_risk must be < 0.6 before cross-node ρ sharing).",
+  "capabilities": [
+    {
+      "id": "validate.expression_qtl",
+      "description": "Query GTEx Portal for a gene's expression across 54 tissues. Compare measured expression with AlphaGenome-predicted functional effect. Return observed/predicted ratio per tissue (sim_real_corr) with cross-layer CausalId linking back to AG1 prediction record.",
+      "tags": [
+        "eon:cluster=N",
+        "eon:layer=validator",
+        "kc5:population",
+        "pacr:field=Omega",
+        "opr:rule=OPR2"
+      ]
+    },
+    {
+      "id": "verify.longevity_gwas",
+      "description": "Query UK Biobank 344K longevity GWAS (Nature Comms 2025, DOI: 10.1038/s41467-025-57315-6) summary statistics for variant-level significance. Return p-value, beta, effect direction, and OPR-2 substrate tag (UKB_European). Novel variants without GWAS signal → recorded as 'candidate_discovery'.",
+      "tags": [
+        "eon:cluster=N",
+        "eon:layer=validator",
+        "kc5:population",
+        "pacr:field=Gamma",
+        "opr:rule=OPR2"
+      ]
+    },
+    {
+      "id": "compute.ossification_risk",
+      "description": "Dual ossification risk tracking: (A) ossification_risk_tissue = 0.0026 — 9 substrate groups nearly balanced (H≈max_H), healthy; (B) ossification_risk_population = 0.685 — UKB European dominant, OPR-5 federation gate BLOCKED until ChinaMAP integration reduces < 0.6.",
+      "tags": [
+        "eon:cluster=O",
+        "eon:layer=validator",
+        "kc5:population",
+        "pacr:field=Gamma",
+        "opr:rule=OPR5",
+        "opr:rule=OPR4"
+      ]
+    },
+    {
+      "id": "compute.per_substrate_rho_ema",
+      "description": "Per-substrate ρ_ema tracking across 9 GTEx pseudo-substrate groups. Brain: 0.788, Cardiovascular: 0.779, Digestive: 0.722, Endocrine: 0.690, Immune: 0.530. Immune lowest (model blind spot). OPR-2 enforced — per-substrate EMA, no mixing.",
+      "tags": [
+        "eon:cluster=N",
+        "eon:layer=validator",
+        "kc5:population",
+        "pacr:field=Gamma",
+        "opr:rule=OPR2"
+      ],
+      "substrate_rho_ema": {
+        "musculoskeletal": 0.7115078711189874,
+        "endocrine": 0.6898776292346086,
+        "cardiovascular": 0.7787457476213653,
+        "urogenital": 0.7176157197288159,
+        "brain": 0.7875450170539706,
+        "other": 0.7173346991187572,
+        "immune": 0.5298768239100924,
+        "digestive": 0.7218171312741636,
+        "respiratory": 0.7831633260165441
+      },
+      "ossification_risk_tissue": 0.0026,
+      "ossification_risk_population": 0.685,
+      "eon:distillation": {
+        "source": "C4_Substrate_Rho_EMA",
+        "distilled_at": "2026-05-05T17:49:28.558904+00:00",
+        "distillation_phase": "C5-#0"
+      }
+    }
+  ],
+  "endpoint": {
+    "protocol": "mcp",
+    "url": "mcp://pv1-population-validator.internal/v1"
+  },
+  "pricing": {
+    "base_cost_joules": 1e-07,
+    "estimated_latency_ms": 100
+  },
+  "metadata": {
+    "pacr:substrate_scope": "GTEx_v8_54_tissues + UKBiobank_344K_longevity_GWAS_2025",
+    "pacr:substrate_gap": "ChinaMAP 10K WGS not yet integrated (pending institutional approval); CLHLS 22.3K longevity cohort pending; FinnGen 500K pending; cross-ethnic validation incomplete",
+    "pacr:domain": "population_validation",
+    "pacr:layer": "population",
+    "pacr:cross_layer_links": [
+      "01JE0CRISPR1CELL00000000001"
+    ],
+    "pacr:rho_isolation_mode": "per_substrate_ema_no_mixing — OPR-2 enforced",
+    "pacr:opr5_federation_prerequisite": "ossification_risk_less_than_0.6 — currently 0.685 BLOCKED",
+    "pacr:fast_proxy": "GTEx_eQTL_sim_real_corr_~100ms",
+    "pacr:slow_validation": "UKB_GWAS_significance_updates_on_new_study_release",
+    "pacr:governance": {
+      "principle": "P0-1: Causal Knowledge Over Prediction Score. PV1 validates predictions against population data.",
+      "opr2_isolation": "Per-substrate rho, never mixed EMA",
+      "opr5_gate": "ossification_risk < 0.6 required for cross-substrate federation",
+      "ancestry_aware": true
+    },
+    "negative_assets": [
+      {
+        "ban_type": "OssificationWarning",
+        "substrate_scope": "UKB_European",
+        "ossification_risk": 0.685,
+        "threshold": 0.6,
+        "status": "OPR5_FEDERATION_BLOCKED",
+        "source": "C4_OPR4_Computation"
+      }
+    ],
+    "pacr:ossification_risk_tissue": 0.0026,
+    "pacr:ossification_risk_population": 0.685,
+    "pacr:dual_ossification": "C5_distinction: tissue-level (substrate balance) vs population-level (ancestry bias)",
+    "workflow": {
+      "max_concurrent_episodes": 5,
+      "episode_timeout_seconds": 60,
+      "retry_policy": {
+        "base_delay_seconds": 10.0,
+        "max_delay_seconds": 120.0,
+        "max_retries": 5,
+        "backoff_multiplier": 1.5
+      },
+      "validation_cadence": {
+        "gtex_validation_every": 10,
+        "c5_falsification_every": 25,
+        "phi_computation_every": 50
+      },
+      "orchestration_policy": "manual"
+    },
+    "eon:last_update": "2026-05-05T17:49:28.559745+00:00"
+  }
+}

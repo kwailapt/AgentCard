@@ -1,0 +1,577 @@
+{
+  "agent_id": "01JE0AG1MOLECULAR0000000001",
+  "name": "AG1 AlphaGenome Mη — DNA Function Predictor",
+  "version": "1.2.0",
+  "description": "Layer 1: World model. Predicts functional genomics signals (H3K27ac, DNase-seq, TF binding, 5,930 tracks total) from DNA sequences up to 1Mb. Called as Mη (world model oracle) by the Ineffable RL agent — NOT as a step-function environment. The RL agent acts in AG1's prediction space, not in raw sequence space.",
+  "capabilities": [
+    {
+      "id": "predict.functional_genomics",
+      "description": "Given a DNA sequence (up to 1Mb centered on target), predict 5,930 functional genomics tracks at single-base resolution. Returns track_name → values array with Estimate<f64> confidence bounds.",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III"
+      ]
+    },
+    {
+      "id": "predict.variant_effect",
+      "description": "Given a reference sequence and a single-nucleotide edit, predict the delta in functional signal (e.g., H3K27ac change). Returns delta per track with lower/upper confidence bounds.",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma"
+      ]
+    },
+    {
+      "id": "rank_predicts_TET2_expression",
+      "description": "DNASE track rank-order predicts TET2 expression across GTEx v8 tissues with Spearman ρ = 0.4",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=TET2"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C2_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556416+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_ATM_expression",
+      "description": "DNASE track rank-order predicts ATM expression across GTEx v8 tissues with Spearman ρ = 0.4",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=ATM"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C2_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556422+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_BRCA2_expression",
+      "description": "DNASE track rank-order predicts BRCA2 expression across GTEx v8 tissues with Spearman ρ = 0.4",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=BRCA2"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C2_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556425+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_TP53_expression",
+      "description": "DNASE track rank-order predicts TP53 expression across GTEx v8 tissues with Spearman ρ = 0.4",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=TP53"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C2_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556427+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_CHEK2_expression",
+      "description": "DNASE track rank-order predicts CHEK2 expression across GTEx v8 tissues with Spearman ρ = 0.4",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=CHEK2"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C2_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556429+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_FOXO3A_expression",
+      "description": "DNASE track rank-order predicts FOXO3A expression across GTEx v8 tissues with Spearman ρ = 0.857",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=FOXO3A"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C3_C4_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556433+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_SIRT6_expression",
+      "description": "DNASE track rank-order predicts SIRT6 expression across GTEx v8 tissues with Spearman ρ = 0.857",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=SIRT6"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C3_C4_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556439+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "rank_predicts_CDKN2A_expression",
+      "description": "DNASE track rank-order predicts CDKN2A expression across GTEx v8 tissues with Spearman ρ = 0.857",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:capital_cache=Verified",
+        "eon:gene=CDKN2A"
+      ],
+      "spearman_rho": 0.857,
+      "spearman_rho_type": "B1_all_time_max_abs",
+      "current_c5_round_rho": 0.833,
+      "survival_streak": 6,
+      "verified_at_episode": 150,
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C3_C4_Capital_Cache_Verified",
+        "distilled_at": "2026-05-05T17:49:28.556441+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "Tacit-to-Explicit_Laddering_Lever_4"
+      }
+    },
+    {
+      "id": "tissue_brain_cerebellar_hemisphere_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Brain_Cerebellar_Hemisphere tissue with per-tissue ρ = 0.8810 (global ρ = 0.833, substrate = brain)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=brain",
+        "eon:tissue=Brain_Cerebellar_Hemisphere",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.8809523809523809,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.04795238095238097,
+      "tissue": "Brain_Cerebellar_Hemisphere",
+      "substrate_group": "brain",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556459+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_brain_cerebellum_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Brain_Cerebellum tissue with per-tissue ρ = 0.8810 (global ρ = 0.833, substrate = brain)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=brain",
+        "eon:tissue=Brain_Cerebellum",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.8809523809523809,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.04795238095238097,
+      "tissue": "Brain_Cerebellum",
+      "substrate_group": "brain",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556463+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_adipose_visceral_omentum_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Adipose_Visceral_Omentum tissue with per-tissue ρ = 0.8333 (global ρ = 0.833, substrate = musculoskeletal)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=musculoskeletal",
+        "eon:tissue=Adipose_Visceral_Omentum",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.8333333333333334,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.00033333333333340764,
+      "tissue": "Adipose_Visceral_Omentum",
+      "substrate_group": "musculoskeletal",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556466+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_artery_tibial_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Artery_Tibial tissue with per-tissue ρ = 0.8333 (global ρ = 0.833, substrate = cardiovascular)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=cardiovascular",
+        "eon:tissue=Artery_Tibial",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.8333333333333334,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.00033333333333340764,
+      "tissue": "Artery_Tibial",
+      "substrate_group": "cardiovascular",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556471+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_brain_amygdala_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Brain_Amygdala tissue with per-tissue ρ = 0.8333 (global ρ = 0.833, substrate = brain)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=brain",
+        "eon:tissue=Brain_Amygdala",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.8333333333333334,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.00033333333333340764,
+      "tissue": "Brain_Amygdala",
+      "substrate_group": "brain",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556474+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_pituitary_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Pituitary tissue with per-tissue ρ = 0.5476 (global ρ = 0.833, substrate = endocrine)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=endocrine",
+        "eon:tissue=Pituitary",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.5476190476190477,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.2853809523809523,
+      "tissue": "Pituitary",
+      "substrate_group": "endocrine",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556477+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_skin_not_sun_exposed_suprapubic_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Skin_Not_Sun_Exposed_Suprapubic tissue with per-tissue ρ = 0.5476 (global ρ = 0.833, substrate = musculoskeletal)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=musculoskeletal",
+        "eon:tissue=Skin_Not_Sun_Exposed_Suprapubic",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.5476190476190477,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.2853809523809523,
+      "tissue": "Skin_Not_Sun_Exposed_Suprapubic",
+      "substrate_group": "musculoskeletal",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556479+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_kidney_medulla_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Kidney_Medulla tissue with per-tissue ρ = 0.5000 (global ρ = 0.833, substrate = urogenital)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=urogenital",
+        "eon:tissue=Kidney_Medulla",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.5,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.33299999999999996,
+      "tissue": "Kidney_Medulla",
+      "substrate_group": "urogenital",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556481+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_testis_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Testis tissue with per-tissue ρ = 0.4048 (global ρ = 0.833, substrate = urogenital)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=urogenital",
+        "eon:tissue=Testis",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.40476190476190477,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.4282380952380952,
+      "tissue": "Testis",
+      "substrate_group": "urogenital",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556484+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    },
+    {
+      "id": "tissue_cells_ebv_transformed_lymphocytes_dnase_prediction",
+      "description": "DNASE track predicts gene expression rank-order in Cells_EBV-transformed_lymphocytes tissue with per-tissue ρ = 0.2619 (global ρ = 0.833, substrate = immune)",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=world_model",
+        "kc5:genomics",
+        "pacr:field=Gamma",
+        "pillar=III",
+        "pacr:substrate_scope=GTEx_v8_European",
+        "eon:substrate_group=immune",
+        "eon:tissue=Cells_EBV-transformed_lymphocytes",
+        "eon:tissue_specific"
+      ],
+      "spearman_rho": 0.2619047619047619,
+      "spearman_rho_type": "per_tissue_abs_rho",
+      "global_rho": 0.833,
+      "specificity_score": 0.5710952380952381,
+      "tissue": "Cells_EBV-transformed_lymphocytes",
+      "substrate_group": "immune",
+      "track": "DNASE",
+      "eon:distillation": {
+        "source": "C4_PerTissue_Spearman_Rho",
+        "distilled_at": "2026-05-05T17:49:28.556486+00:00",
+        "distillation_phase": "C5-#0",
+        "mechanism": "PerTissue_Rho_Extraction"
+      }
+    }
+  ],
+  "endpoint": {
+    "protocol": "mcp",
+    "url": "mcp://ag1-alphagenome.internal/v1"
+  },
+  "pricing": {
+    "base_cost_joules": 0.001,
+    "estimated_latency_ms": 5000
+  },
+  "metadata": {
+    "pacr:substrate_scope": "DNA_sequence_1bp_to_1Mb_human_GRCh38",
+    "pacr:substrate_gap": "Non-human genomes not calibrated; structural variants > 1Mb excluded; training data predominantly European reference genomes",
+    "pacr:domain": "genomics_world_model",
+    "pacr:layer": "molecular",
+    "pacr:output": "Estimate_f64_functional_genomics_track",
+    "pacr:role": "Mη — world model oracle, queried by RL agent, NOT step-function environment",
+    "pacr:governance": {
+      "principle": "P0-2: Simulator-as-Cheap-Proxy. AlphaGenome predictions are NOT ground truth — they are cheap surrogate rewards. All predictions must be cross-validated against population data (GTEx, UKB) before entering Capital Cache.",
+      "lambda_source": "PACR Λ field = Rust LandauerAllocator hardware-measured. AlphaGenome inference cost = python_jax_gpu_tdp_estimate, written to P metadata only.",
+      "sim_real_corr_required": true,
+      "no_clinical_use": true,
+      "no_germline_editing": true,
+      "max_sequence_length": 1000000
+    },
+    "pacr:ossification_risk": "high",
+    "pacr:model_class": "Enformer-based_5K_output_heads",
+    "eon:last_distillation": "2026-05-05T17:49:28.557279+00:00",
+    "eon:distilled_capabilities_count": 20,
+    "negative_assets": [
+      {
+        "ban_type": "TissueSpecificBlindSpot",
+        "gene": "ALL",
+        "tissue": "Cells_EBV-transformed_lymphocytes",
+        "substrate_scope": "immune",
+        "per_tissue_rho": 0.262,
+        "global_rho": 0.833,
+        "deviation": 0.571,
+        "source": "C4_BRCA2_PerTissue_Diagnosis"
+      }
+    ],
+    "negative_assets_count": 1,
+    "workflow": {
+      "max_concurrent_episodes": 1,
+      "episode_timeout_seconds": 300,
+      "retry_policy": {
+        "base_delay_seconds": 30.0,
+        "max_delay_seconds": 600.0,
+        "max_retries": 3,
+        "backoff_multiplier": 2.0
+      },
+      "validation_cadence": {
+        "gtex_validation_every": 20,
+        "c5_falsification_every": 50,
+        "phi_computation_every": 100
+      },
+      "orchestration_policy": "manual"
+    },
+    "eon:c4_global_rho": 0.833,
+    "eon:c4_b1_max": 0.881,
+    "eon:c4_phi_final": 0.7984
+  }
+}

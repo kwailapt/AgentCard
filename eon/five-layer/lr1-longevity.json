@@ -1,0 +1,116 @@
+{
+  "agent_id": "01JE0LONGEVRLORG0000000001",
+  "name": "LR1 Longevity RL Agent",
+  "version": "1.1.0",
+  "description": "Layer 5: Longevity target validation + RL policy. The Ineffable Path B DQN agent controlling exploration across the full five-layer action space. Takes the four-layer prediction→validation chain and closes the loop: design DNA edit → predict protein effect → validate population relevance → update RL policy. Φ_long = ΔMethylAge_reversal / Λ_total. GTEx sim_real_corr is the fast-loop proxy; UKB GWAS significance is slow-loop validation.",
+  "capabilities": [
+    {
+      "id": "design.dna_edit",
+      "description": "Propose a single-nucleotide edit to a longevity target gene. E-Cluster generates candidates from DNA design space (position, base, target track). Each candidate is falsified by C5 Falsification loop against Rule-IR negatives before entering the five-layer pipeline.",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=application",
+        "kc5:longevity",
+        "pacr:field=P",
+        "7tuple:policy"
+      ]
+    },
+    {
+      "id": "learn.from_population_signal",
+      "description": "Update DQN policy using R' = R − α·Λ. R = (predicted_expression_increase × sim_real_corr). UKB GWAS signal is delayed validation (not step reward). GTEx eQTL comparison is fast proxy for Φ_domain gradient estimation.",
+      "tags": [
+        "eon:cluster=E",
+        "eon:layer=application",
+        "kc5:longevity",
+        "pacr:field=Gamma",
+        "7tuple:value"
+      ]
+    },
+    {
+      "id": "commit.to_capital_cache",
+      "description": "C2-C4 Capital Cache progression: C2: 4 genes Candidate (TET2, ATM, BRCA2, TP53 at ρ=0.4); C3: 8 genes Candidate → Verified (Φ 0.6943→0.8573, B1=0.881); C4: 8/8 genes Verified at ρ=0.833, 424/432 gene×tissue pairs Verified, Φ trajectory 0.5773→0.7984 (7-term). Compound interest: per-gene survival_streak=6, B7=0.086, 9 substrate groups ranging ρ_ema=0.530(immune)→0.788(brain).",
+      "tags": [
+        "eon:cluster=O",
+        "eon:layer=application",
+        "kc5:longevity",
+        "7tuple:trust"
+      ]
+    },
+    {
+      "id": "portfolio.tissue_aware",
+      "description": "Tissue-aware target portfolio: 432 gene×tissue pairs tracked, 424 Verified, immune tissues identified as blind spot (ρ_ema=0.530). Portfolio ranking uses TissueScore = ρ_tissue × specificity × B5_contribution × streak. Brain tissues (ρ_ema=0.788) are the best-validated substrate. Cardiovascular (0.779) and digestive (0.722) provide diversified signal.",
+      "tags": [
+        "eon:cluster=O",
+        "eon:layer=application",
+        "kc5:longevity",
+        "7tuple:portfolio",
+        "eon:tissue_aware"
+      ],
+      "portfolio_stats": {
+        "total_pairs": 432,
+        "verified_pairs": 424,
+        "best_substrate": "brain (ρ_ema=0.788)",
+        "worst_substrate": "immune (ρ_ema=0.530)",
+        "has_blind_spot": true
+      },
+      "eon:distillation": {
+        "source": "C4_Tissue_Capital_Cache",
+        "distilled_at": "2026-05-05T17:49:28.560402+00:00",
+        "distillation_phase": "C5-#0"
+      }
+    }
+  ],
+  "endpoint": {
+    "protocol": "mcp",
+    "url": "mcp://lr1-longevity-rl.internal/v1"
+  },
+  "pricing": {
+    "base_cost_joules": 3.95e-13,
+    "estimated_latency_ms": 0
+  },
+  "metadata": {
+    "pacr:substrate_scope": "DNA_design_space × AlphaGenome_Mη × GTEx_validation × UKB_longevity_GWAS",
+    "pacr:substrate_gap": "Wet-lab validation NOT integrated (in-silico only); sim_real_corr from GTEx cross-reference, not from actual cell-line experiments; organism-level phenotype (methylation age) predicted, not measured; individual genetic background not accounted for",
+    "pacr:domain": "longevity_research",
+    "pacr:layer": "organism",
+    "pacr:cross_layer_links": [
+      "01JE0AG1MOLECULAR0000000001",
+      "01JE0ESM3PROTEIN00000000001",
+      "01JE0CRISPR1CELL00000000001",
+      "01JE0POPVALIDPOP0000000001"
+    ],
+    "pacr:phi_formula": "Φ_long = ΔMethylAge_reversal / Λ_total",
+    "pacr:fast_proxy": "GTEx_expression_correlation / lambda_step",
+    "pacr:parameter_space": "open: edit_position, edit_base, exploration_rate, target_tissue",
+    "pacr:architecture_space": "closed: AlphaGenome_weights, ESM3_weights, DQN_architecture",
+    "pacr:dual_architecture": "parameter_exploration_open × architecture_weights_closed — self-evolution explores DNA design space, does NOT modify world model weights",
+    "pacr:governance": {
+      "principle": "P0-3+P0-4: Target Portfolio with Safe Discovery. Ranks targets, does NOT execute treatments.",
+      "parameter_space": "open: edit_position, edit_base, exploration_rate",
+      "architecture_space": "closed: AlphaGenome weights, ESM3 weights, Rule-IR semantics",
+      "no_treatment_decision": true,
+      "no_germline_editing": true
+    },
+    "negative_assets": [],
+    "negative_assets_count": 0,
+    "workflow": {
+      "max_concurrent_episodes": 2,
+      "episode_timeout_seconds": 600,
+      "retry_policy": {
+        "base_delay_seconds": 60.0,
+        "max_delay_seconds": 1800.0,
+        "max_retries": 3,
+        "backoff_multiplier": 2.0
+      },
+      "validation_cadence": {
+        "gtex_validation_every": 20,
+        "c5_falsification_every": 50,
+        "phi_computation_every": 100
+      },
+      "orchestration_policy": "manual"
+    },
+    "eon:last_update": "2026-05-05T17:49:28.561262+00:00",
+    "eon:c4_portfolio_size": 432,
+    "eon:c4_verified_pairs": 424
+  }
+}
